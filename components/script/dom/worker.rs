@@ -213,6 +213,7 @@ impl WorkerMessageHandler {
 impl Runnable for WorkerMessageHandler {
     fn handler(self: Box<WorkerMessageHandler>) {
         let this = *self;
+        println!("RECEIVED WorkerMessageHandler {:?}", this.addr);
         Worker::handle_message(this.addr, this.data);
     }
 }
@@ -242,6 +243,7 @@ impl WorkerErrorHandler {
 impl Runnable for WorkerErrorHandler {
     fn handler(self: Box<Self>) {
         let this = *self;
+        println!("RECEIVED WorkerErrorHandler {:?} {:?}", this.address, this.error_info);
         this.address.root().dispatch_error(this.error_info);
     }
 }

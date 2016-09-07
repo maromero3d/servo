@@ -133,6 +133,7 @@ pub unsafe fn throw_dom_exception(cx: *mut JSContext, global: GlobalRef, result:
 }
 
 /// A struct encapsulating information about a runtime script error.
+#[derive(Debug)]
 pub struct ErrorInfo {
     /// The error message.
     pub message: String,

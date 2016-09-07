@@ -374,6 +374,7 @@ impl DedicatedWorkerGlobalScope {
         if !handled {
             let worker = self.worker.borrow().as_ref().unwrap().clone();
             // TODO: Should use the DOM manipulation task source.
+            println!("SENDING WorkerErrorHandler {:?} {:?}", worker, error_info);
             self.parent_sender
                 .send(CommonScriptMsg::RunnableMsg(WorkerEvent,
                                                    box WorkerErrorHandler::new(worker, error_info)))
@@ -402,6 +403,7 @@ impl DedicatedWorkerGlobalScopeMethods for DedicatedWorkerGlobalScope {
     fn PostMessage(&self, cx: *mut JSContext, message: HandleValue) -> ErrorResult {
         let data = try!(StructuredCloneData::write(cx, message));
         let worker = self.worker.borrow().as_ref().unwrap().clone();
+        println!("SENDING WorkerMessageHandler {:?}", worker);
         self.parent_sender
             .send(CommonScriptMsg::RunnableMsg(WorkerEvent,
                                                box WorkerMessageHandler::new(worker, data)))

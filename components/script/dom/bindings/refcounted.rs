@@ -105,6 +105,12 @@ impl<T: Reflectable> Trusted<T> {
     }
 }
 
+impl<T: Reflectable> ::std::fmt::Debug for Trusted<T> {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(f, "Trusted({:p})", self.refcount.0)
+    }
+}
+
 impl<T: Reflectable> Clone for Trusted<T> {
     fn clone(&self) -> Trusted<T> {
         Trusted {
