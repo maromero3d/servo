@@ -1355,7 +1355,18 @@ impl WebGLRenderingContextMethods for WebGLRenderingContext {
 
     // https://www.khronos.org/registry/webgl/specs/latest/1.0/#5.14.9
     fn GetProgramInfoLog(&self, program: Option<&WebGLProgram>) -> Option<DOMString> {
-        program.map(|p| p.get_info_log()).map(DOMString::from)
+        if let Some(program) = program {
+            match program.get_info_log() {
+                Ok(value) => Some(DOMString::from(value)),
+                Err(e) => {
+                    self.webgl_error(e);
+                    None
+                }
+            }
+        } else {
+            self.webgl_error(WebGLError::InvalidValue);
+            None
+        }             
     }
 
     // https://www.khronos.org/registry/webgl/specs/latest/1.0/#5.14.9
@@ -1704,7 +1715,9 @@ impl WebGLRenderingContextMethods for WebGLRenderingContext {
     // https://www.khronos.org/registry/webgl/specs/latest/1.0/#5.14.9
     fn LinkProgram(&self, program: Option<&WebGLProgram>) {
         if let Some(program) = program {
-            program.link()
+            if let Err(e) = program.link() {
+                self.webgl_error(e);
+            }
         }
     }
 
@@ -1948,7 +1961,9 @@ impl WebGLRenderingContextMethods for WebGLRenderingContext {
     // https://www.khronos.org/registry/webgl/specs/latest/1.0/#5.14.9
     fn ValidateProgram(&self, program: Option<&WebGLProgram>) {
         if let Some(program) = program {
-            program.validate();
+            if let Err(e) = program.validate() {
+                self.webgl_error(e);
+            }
         }
     }
 
