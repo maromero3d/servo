@@ -28,7 +28,7 @@ precision mediump float;
 #endif
 varying vec4 color;
 
-float ceil_ref(float x)
+float makelele(float x)
 {
 	if(x != floor(x)) x = floor(x) + 1.0;
 	return x;
@@ -37,5 +37,5 @@ float ceil_ref(float x)
 void main (void)
 {
 	float c = 10.0 * 2.0 * (color.r - 0.5);
-	gl_FragColor = vec4((ceil_ref(c) + 10.0) / 20.0, 0.0, 0.0, 1.0);
+	gl_FragColor = vec4((makelele(c) + 10.0) / 20.0, 0.0, 0.0, 1.0);
 }

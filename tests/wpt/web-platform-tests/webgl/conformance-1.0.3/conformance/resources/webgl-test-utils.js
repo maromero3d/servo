@@ -1400,7 +1400,6 @@ var linkProgram = function(gl, program, opt_errorCallback) {
   if (!linked) {
     // something went wrong with the link
     var error = gl.getProgramInfoLog (program);
-
     errFn("Error in program linking:" + error);
 
     gl.deleteProgram(program);
@@ -1642,6 +1641,7 @@ var loadShader = function(
         gl, document.getElementById('console'), label, shader, shaderSource, opt_url);
   }
 
+  //alert('aa');
   // Check the compile status
   var compiled = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
   if (!compiled) {
@@ -1649,6 +1649,7 @@ var loadShader = function(
     lastError = gl.getShaderInfoLog(shader);
     errFn("*** Error compiling " + glEnumToString(gl, shaderType) + " '" + shader + "':" + lastError);
     gl.deleteShader(shader);
+    alert("delete shader: " + lastError);
     return null;
   }
 
@@ -1794,6 +1795,9 @@ var loadProgramFromScript = function loadProgramFromScript(
  */
 var createProgram = function(gl, vertexShader, fragmentShader, opt_errorCallback) {
   var program = gl.createProgram();
+  if (vertexShader === null || fragmentShader == null) {
+    alert("About to compile: " + vertexShader + " " + fragmentShader);
+  }
   gl.attachShader(program, vertexShader);
   gl.attachShader(program, fragmentShader);
   linkProgram(gl, program, opt_errorCallback);

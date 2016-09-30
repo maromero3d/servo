@@ -144,7 +144,10 @@ impl WebGLProgram {
 
     /// glAttachShader
     pub fn attach_shader(&self, shader: &WebGLShader) -> WebGLResult<()> {
-        if self.is_deleted() {
+        if self.is_deleted() || shader.is_deleted() {
+            return Err(WebGLError::InvalidOperation);
+        }
+        if shader.is_attached() {
             return Err(WebGLError::InvalidOperation);
         }
         let shader_slot = match shader.gl_type() {

@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 // https://www.khronos.org/registry/webgl/specs/latest/1.0/webgl.idl
-use angle::hl::{BuiltInResources, Output, ShaderValidator};
+use angle::hl::{BuiltInResources, Output, ShaderValidator, ShaderSpec};
 use canvas_traits::CanvasMsg;
 use dom::bindings::cell::DOMRefCell;
 use dom::bindings::codegen::Bindings::WebGLShaderBinding;
@@ -103,7 +103,8 @@ impl WebGLShader {
         }
 
         if let Some(ref source) = *self.source.borrow() {
-            let validator = ShaderValidator::for_webgl(self.gl_type,
+            let validator = ShaderValidator::new(self.gl_type,
+                                                       ShaderSpec::Gles2,
                                                        SHADER_OUTPUT_FORMAT,
                                                        &BuiltInResources::default()).unwrap();
             match validator.compile_and_translate(&[source]) {
