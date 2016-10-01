@@ -225,7 +225,7 @@ impl WebGLProgram {
 
     pub fn get_active_uniform(&self, index: u32) -> WebGLResult<Root<WebGLActiveInfo>> {
         if self.is_deleted() {
-            return Err(WebGLError::InvalidOperation);
+            return Err(WebGLError::InvalidValue);
         }
         let (sender, receiver) = ipc::channel().unwrap();
         self.renderer
@@ -239,7 +239,7 @@ impl WebGLProgram {
     /// glGetActiveAttrib
     pub fn get_active_attrib(&self, index: u32) -> WebGLResult<Root<WebGLActiveInfo>> {
         if self.is_deleted() {
-            return Err(WebGLError::InvalidOperation);
+            return Err(WebGLError::InvalidValue);
         }
         let (sender, receiver) = ipc::channel().unwrap();
         self.renderer
