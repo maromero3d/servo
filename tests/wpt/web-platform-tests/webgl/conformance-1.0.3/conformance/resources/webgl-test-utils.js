@@ -1649,7 +1649,6 @@ var loadShader = function(
     lastError = gl.getShaderInfoLog(shader);
     errFn("*** Error compiling " + glEnumToString(gl, shaderType) + " '" + shader + "':" + lastError);
     gl.deleteShader(shader);
-    alert("delete shader: " + lastError);
     return null;
   }
 

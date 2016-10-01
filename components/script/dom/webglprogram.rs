@@ -147,9 +147,6 @@ impl WebGLProgram {
         if self.is_deleted() || shader.is_deleted() {
             return Err(WebGLError::InvalidOperation);
         }
-        if shader.is_attached() {
-            return Err(WebGLError::InvalidOperation);
-        }
         let shader_slot = match shader.gl_type() {
             constants::FRAGMENT_SHADER => &self.fragment_shader,
             constants::VERTEX_SHADER => &self.vertex_shader,
