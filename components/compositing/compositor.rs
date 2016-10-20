@@ -662,7 +662,9 @@ impl<Window: WindowMethods> IOCompositor<Window> {
                 }
             }
 
-            (Msg::Dispatch(func), _) => {
+            (Msg::Dispatch(func), ShutdownState::NotShuttingDown) => {
+                // The functions sent here right now are really dumb, so they can't panic. 
+                // But if we start running more complex code here, we should really catch panic here.
                 func();
             }
 
