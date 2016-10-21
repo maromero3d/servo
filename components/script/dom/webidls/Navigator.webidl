@@ -58,3 +58,10 @@ interface NavigatorPlugins {
 interface NavigatorCookies {
   readonly attribute boolean cookieEnabled;
 };
+
+// https://w3c.github.io/webvr/#interface-navigator
+partial interface Navigator {
+  Promise<sequence<VRDisplay>> getVRDisplays();
+  //readonly attribute FrozenArray<VRDisplay> activeVRDisplays;
+  readonly attribute boolean vrEnabled;
+};
