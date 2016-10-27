@@ -10,9 +10,12 @@ use dom::bindings::str::DOMString;
 use dom::bluetooth::Bluetooth;
 use dom::mimetypearray::MimeTypeArray;
 use dom::navigatorinfo;
+use dom::promise::Promise;
 use dom::pluginarray::PluginArray;
 use dom::serviceworkercontainer::ServiceWorkerContainer;
 use dom::window::Window;
+
+use std::rc::Rc;
 
 #[dom_struct]
 pub struct Navigator {
@@ -112,6 +115,16 @@ impl NavigatorMethods for Navigator {
     // https://html.spec.whatwg.org/multipage/#dom-navigator-cookieenabled
     fn CookieEnabled(&self) -> bool {
         true
+    }
+
+    // https://w3c.github.io/webvr/#interface-navigator
+    fn GetVRDisplays(&self) -> Rc<Promise> {
+        unimplemented!()
+    }
+
+    // https://w3c.github.io/webvr/#interface-navigator
+    fn VrEnabled(&self) -> bool {
+        unimplemented!()
     }
 
 }
