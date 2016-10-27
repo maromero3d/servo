@@ -9,7 +9,7 @@ typedef (HTMLCanvasElement or CanvasRenderingContext2D) VRSource;
 
 dictionary VRLayer {
   VRSource? source;
-
+  
   sequence<float>? leftBounds;
   sequence<float>? rightBounds;
 };

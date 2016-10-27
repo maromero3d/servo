@@ -1,0 +1,16 @@
+[package]
+name = "vr"
+version = "0.0.1"
+authors = ["The Servo Project Developers"]
+license = "MPL-2.0"
+publish = false
+
+[lib]
+name = "vr"
+path = "lib.rs"
+
+[dependencies]
+webvr = {git = "https://github.com/MortimerGoro/rust-webvr"}
+plugins = {path = "../plugins"}
+
+
