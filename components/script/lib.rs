@@ -95,6 +95,7 @@ extern crate uuid;
 extern crate webrender_traits;
 extern crate websocket;
 extern crate xml5ever;
+extern crate vr;
 
 pub mod bluetooth_blacklist;
 mod body;
