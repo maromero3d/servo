@@ -2,12 +2,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// https://w3c.github.io/webvr/#interface-vrdisplay
-
 enum VREye {
   "left",
   "right"
 };
+
+
+// https://w3c.github.io/webvr/#interface-vrdisplay
 
 interface VRDisplay : EventTarget {
   readonly attribute boolean isConnected;
@@ -117,7 +118,7 @@ interface VRDisplay : EventTarget {
   /**
    * Get the layers currently being presented.
    */
-  sequence<VRLayer> getLayers();
+  //sequence<VRLayer> getLayers();
 
   /**
    * The VRLayer provided to the VRDisplay will be captured and presented
