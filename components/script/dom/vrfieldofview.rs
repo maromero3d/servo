@@ -2,7 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use core::nonzero::NonZero;
 use dom::bindings::cell::DOMRefCell;
 use dom::bindings::codegen::Bindings::VRFieldOfViewBinding;
 use dom::bindings::codegen::Bindings::VRFieldOfViewBinding::VRFieldOfViewMethods;
@@ -10,15 +9,7 @@ use dom::bindings::js::Root;
 use dom::bindings::num::Finite;
 use dom::bindings::reflector::{Reflector, reflect_dom_object};
 use dom::globalscope::GlobalScope;
-use euclid::size::Size2D;
 use heapsize::HeapSizeOf;
-use js::jsapi::{Heap, JSContext, JSObject};
-use js::jsapi::{JS_GetUint8ClampedArrayData, JS_NewUint8ClampedArray};
-use libc::uint8_t;
-use std::default::Default;
-use std::ptr;
-use std::slice;
-use std::vec::Vec;
 use vr::webvr;
 
 #[dom_struct]
@@ -39,7 +30,7 @@ impl HeapSizeOf for WebVRFieldOfView {
 
 impl VRFieldOfView {
 
-    fn new_inherited(global: &GlobalScope, fov: &webvr::VRFieldOfView) -> VRFieldOfView {
+    fn new_inherited(fov: &webvr::VRFieldOfView) -> VRFieldOfView {
         VRFieldOfView {
             reflector_: Reflector::new(),
             fov: DOMRefCell::new(WebVRFieldOfView(fov.clone()))
@@ -47,7 +38,7 @@ impl VRFieldOfView {
     }
 
     pub fn new(global: &GlobalScope, fov: &webvr::VRFieldOfView) -> Root<VRFieldOfView> {
-        reflect_dom_object(box VRFieldOfView::new_inherited(&global, &fov),
+        reflect_dom_object(box VRFieldOfView::new_inherited(&fov),
                            global,
                            VRFieldOfViewBinding::Wrap)
     }

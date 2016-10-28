@@ -12,15 +12,8 @@ use dom::bindings::num::Finite;
 use dom::bindings::reflector::{Reflector, reflect_dom_object};
 use dom::globalscope::GlobalScope;
 use dom::vrpose::VRPose;
-use euclid::size::Size2D;
 use js::jsapi::{Heap, JSContext, JSObject};
-use js::jsapi::{JS_GetUint8ClampedArrayData, JS_NewUint8ClampedArray};
-use libc::uint8_t;
 use std::cell::Cell;
-use std::default::Default;
-use std::ptr;
-use std::slice;
-use std::vec::Vec;
 use time;
 use vr::webvr;
 
@@ -37,6 +30,7 @@ pub struct VRFrameData {
 
 impl VRFrameData {
 
+    #[allow(unrooted_must_root)]
     fn new_inherited(global: &GlobalScope) -> VRFrameData {
 
         let matrix = [1.0, 0.0, 0.0, 0.0,
@@ -75,6 +69,7 @@ impl VRFrameData {
 
 
 impl VRFrameData {
+    #[allow(unsafe_code)]
     pub fn update(&self, data: &webvr::VRFrameData) {
         unsafe {
             update_array_buffer_view(self.left_proj.get(), &data.left_projection_matrix);
@@ -91,23 +86,27 @@ impl VRFrameDataMethods for VRFrameData {
         Finite::wrap(self.timestamp.get() as f64)
     }
 
-    fn LeftProjectionMatrix(&self, cx: *mut JSContext) -> NonZero<*mut JSObject> {
+    #[allow(unsafe_code)]
+    fn LeftProjectionMatrix(&self, _cx: *mut JSContext) -> NonZero<*mut JSObject> {
         unsafe { NonZero::new(self.left_proj.get()) }
     }
 
-    fn LeftViewMatrix(&self, cx: *mut JSContext) -> NonZero<*mut JSObject> {
+    #[allow(unsafe_code)]
+    fn LeftViewMatrix(&self, _cx: *mut JSContext) -> NonZero<*mut JSObject> {
         unsafe { NonZero::new(self.left_view.get()) }
     }
 
-    fn RightProjectionMatrix(&self, cx: *mut JSContext) -> NonZero<*mut JSObject> {
+    #[allow(unsafe_code)]
+    fn RightProjectionMatrix(&self, _cx: *mut JSContext) -> NonZero<*mut JSObject> {
         unsafe { NonZero::new(self.right_proj.get()) }
     }
 
-    fn RightViewMatrix(&self, cx: *mut JSContext) -> NonZero<*mut JSObject> {
+    #[allow(unsafe_code)]
+    fn RightViewMatrix(&self, _cx: *mut JSContext) -> NonZero<*mut JSObject> {
         unsafe { NonZero::new(self.right_view.get()) }
     }
 
     fn Pose(&self) -> Root<VRPose> {
-        Root::form_ref(&*self.pose)
+        Root::from_ref(&*self.pose)
     }
 }

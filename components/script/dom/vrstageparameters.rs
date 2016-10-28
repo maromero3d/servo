@@ -11,15 +11,8 @@ use dom::bindings::js::Root;
 use dom::bindings::reflector::{Reflector, reflect_dom_object};
 use dom::bindings::num::Finite;
 use dom::globalscope::GlobalScope;
-use euclid::size::Size2D;
 use heapsize::HeapSizeOf;
 use js::jsapi::{Heap, JSContext, JSObject};
-use js::jsapi::{JS_GetUint8ClampedArrayData, JS_NewUint8ClampedArray};
-use libc::uint8_t;
-use std::default::Default;
-use std::ptr;
-use std::slice;
-use std::vec::Vec;
 use vr::webvr;
 
 #[dom_struct]
@@ -41,6 +34,7 @@ impl HeapSizeOf for WebVRStageParameters {
 
 impl VRStageParameters {
 
+    #[allow(unrooted_must_root)]
     fn new_inherited(parameters: &webvr::VRStageParameters, global: &GlobalScope) -> VRStageParameters {
         let mut stage = VRStageParameters {
             reflector_: Reflector::new(),
@@ -62,7 +56,8 @@ impl VRStageParameters {
 impl VRStageParametersMethods for VRStageParameters {
 
     // https://w3c.github.io/webvr/#dom-vrstageparameters-sittingtostandingtransform
-    fn SittingToStandingTransform(&self, cx: *mut JSContext) -> NonZero<*mut JSObject> {
+    #[allow(unsafe_code)]
+    fn SittingToStandingTransform(&self, _cx: *mut JSContext) -> NonZero<*mut JSObject> {
         unsafe { NonZero::new(self.transform.get()) }
     }
 

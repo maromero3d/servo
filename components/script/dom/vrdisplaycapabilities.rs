@@ -2,21 +2,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use core::nonzero::NonZero;
 use dom::bindings::cell::DOMRefCell;
 use dom::bindings::codegen::Bindings::VRDisplayCapabilitiesBinding;
 use dom::bindings::codegen::Bindings::VRDisplayCapabilitiesBinding::VRDisplayCapabilitiesMethods;
 use dom::bindings::js::Root;
 use dom::bindings::reflector::{Reflector, reflect_dom_object};
 use dom::globalscope::GlobalScope;
-use euclid::size::Size2D;
 use heapsize::HeapSizeOf;
-use js::jsapi::{Heap, JSContext, JSObject};
-use libc::uint8_t;
-use std::default::Default;
-use std::ptr;
-use std::slice;
-use std::vec::Vec;
 use vr::webvr;
 
 #[dom_struct]
@@ -37,7 +29,7 @@ impl HeapSizeOf for WebVRDisplayCapabilities {
 
 impl VRDisplayCapabilities {
 
-    fn new_inherited(capabilities:&webvr::VRDisplayCapabilities, global: &GlobalScope) -> VRDisplayCapabilities {
+    fn new_inherited(capabilities:&webvr::VRDisplayCapabilities) -> VRDisplayCapabilities {
         VRDisplayCapabilities {
             reflector_: Reflector::new(),
             capabilities: DOMRefCell::new(WebVRDisplayCapabilities(capabilities.clone()))
@@ -45,7 +37,7 @@ impl VRDisplayCapabilities {
     }
 
     pub fn new(capabilities:&webvr::VRDisplayCapabilities, global: &GlobalScope) -> Root<VRDisplayCapabilities> {
-        reflect_dom_object(box VRDisplayCapabilities::new_inherited(capabilities, global),
+        reflect_dom_object(box VRDisplayCapabilities::new_inherited(capabilities),
                            global,
                            VRDisplayCapabilitiesBinding::Wrap)
     }

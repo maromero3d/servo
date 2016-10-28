@@ -2,8 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use canvas_traits::{CanvasCommonMsg, CanvasMsg, byte_swap};
-use core::nonzero::NonZero;
 use core::ops::Deref;
 use dom::bindings::cell::DOMRefCell;
 use dom::bindings::codegen::Bindings::VRDisplayBinding;
@@ -11,36 +9,19 @@ use dom::bindings::codegen::Bindings::VRDisplayBinding::VRDisplayMethods;
 use dom::bindings::codegen::Bindings::VRDisplayBinding::VREye;
 use dom::bindings::codegen::Bindings::VRLayerBinding::VRLayer;
 use dom::bindings::codegen::Bindings::WindowBinding::FrameRequestCallback;
-use dom::bindings::codegen::UnionTypes::ImageDataOrHTMLImageElementOrHTMLCanvasElementOrHTMLVideoElement;
-use dom::bindings::conversions::{ArrayBufferViewContents, ConversionResult, FromJSValConvertible, ToJSValConvertible};
-use dom::bindings::conversions::{array_buffer_to_vec, array_buffer_view_data, array_buffer_view_data_checked};
-use dom::bindings::conversions::{array_buffer_view_to_vec, array_buffer_view_to_vec_checked};
-use dom::bindings::error::{Error, Fallible};
-use dom::bindings::inheritance::Castable;
-use dom::bindings::js::{JS, LayoutJS, MutNullableHeap, MutHeap, Root};
+use dom::bindings::js::{JS, MutNullableHeap, MutHeap, Root};
 use dom::bindings::num::Finite;
-use dom::bindings::reflector::{Reflectable, Reflector, reflect_dom_object};
+use dom::bindings::reflector::{Reflectable, reflect_dom_object};
 use dom::bindings::str::DOMString;
-use dom::bindings::trace::JSTraceable;
-use dom::event::{Event, EventBubbles, EventCancelable};
 use dom::eventtarget::EventTarget;
 use dom::globalscope::GlobalScope;
-use dom::htmlcanvaselement::HTMLCanvasElement;
 use dom::promise::Promise;
-use dom::node::{Node, NodeDamage, window_from_node};
 use dom::vrdisplaycapabilities::VRDisplayCapabilities;
 use dom::vrstageparameters::VRStageParameters;
 use dom::vreyeparameters::VREyeParameters;
 use dom::vrframedata::VRFrameData;
 use dom::vrpose::VRPose;
 use heapsize::HeapSizeOf;
-use ipc_channel::ipc::{self, IpcSender};
-use js::conversions::ConversionBehavior;
-use js::jsapi::{JSContext, JSObject, JS_GetArrayBufferViewType, Type};
-use js::jsval::{BooleanValue, DoubleValue, Int32Value, JSVal, NullValue, UndefinedValue};
-use net_traits::image::base::PixelFormat;
-use net_traits::image_cache_thread::ImageResponse;
-use script_traits::ScriptMsg as ConstellationMsg;
 use std::cell::Cell;
 use std::rc::Rc;
 use vr::webvr;
@@ -97,7 +78,7 @@ impl VRDisplay {
             left_eye_params: MutHeap::new(&*VREyeParameters::new(&display.left_eye_parameters, &global)),
             right_eye_params: MutHeap::new(&*VREyeParameters::new(&display.right_eye_parameters, &global)),
             capabilities: MutHeap::new(&*VRDisplayCapabilities::new(&display.capabilities, &global)),
-            stage_params: MutNullableHeap::new(stage.as_ref().map(|v| &*v)),
+            stage_params: MutNullableHeap::new(stage.as_ref().map(|v| v.deref())),
             frame_data: DOMRefCell::new(Default::default())
         }
     }
@@ -177,18 +158,20 @@ impl VRDisplayMethods for VRDisplay {
         self.depth_far.set(*value.deref());
     }
 
-    fn RequestAnimationFrame(&self, callback: Rc<FrameRequestCallback>) -> i32 {
+    fn RequestAnimationFrame(&self, _callback: Rc<FrameRequestCallback>) -> i32 {
         unimplemented!()
     }
 
-    fn CancelAnimationFrame(&self, handle: i32) -> () {
+    fn CancelAnimationFrame(&self, _handle: i32) -> () {
         unimplemented!()
     }
 
-    fn RequestPresent(&self, layers: Vec<VRLayer>) -> Rc<Promise> {
+    #[allow(unrooted_must_root)]
+    fn RequestPresent(&self, _layers: Vec<VRLayer>) -> Rc<Promise> {
         unimplemented!()
     }
 
+    #[allow(unrooted_must_root)]
     fn ExitPresent(&self) -> Rc<Promise> {
         unimplemented!()
     }
