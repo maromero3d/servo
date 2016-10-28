@@ -9,12 +9,12 @@ use dom::bindings::js::Root;
 use dom::bindings::num::Finite;
 use dom::bindings::reflector::{Reflector, reflect_dom_object};
 use dom::globalscope::GlobalScope;
-use heapsize::HeapSizeOf;
 use vr::webvr;
 
 #[dom_struct]
 pub struct VRFieldOfView {
     reflector_: Reflector,
+    #[ignore_heap_size_of = "Defined in rust-webvr"]
     fov: DOMRefCell<WebVRFieldOfView>
 }
 
@@ -22,11 +22,6 @@ pub struct VRFieldOfView {
 #[derive(Clone)]
 pub struct WebVRFieldOfView(webvr::VRFieldOfView);
 no_jsmanaged_fields!(WebVRFieldOfView);
-impl HeapSizeOf for WebVRFieldOfView {
-    fn heap_size_of_children(&self) -> usize {
-        0
-    }
-}
 
 impl VRFieldOfView {
 
