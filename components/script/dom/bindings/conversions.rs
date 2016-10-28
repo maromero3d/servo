@@ -667,7 +667,7 @@ pub unsafe fn update_array_buffer_view<T>(obj: *mut JSObject, data: &[T])
     where T: ArrayBufferViewContents
 {
     let mut buffer = array_buffer_view_data(obj);
-    if let Some(ref buffer) = buffer {
+    if let Some(ref mut buffer) = buffer {
         ptr::copy_nonoverlapping(&data[0], &mut buffer[0], data.len() * mem::size_of::<T>())
     }
 }

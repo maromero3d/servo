@@ -112,7 +112,7 @@ impl VRDisplayEventMethods for VRDisplayEvent {
 
     // https://w3c.github.io/webvr/#dom-vrdisplayevent-display
     fn Display(&self) -> Root<VRDisplay> {
-        self.display
+        Root::from_ref(&*self.display)
     }
 
     // https://w3c.github.io/webvr/#enumdef-vrdisplayeventreason
