@@ -21,7 +21,6 @@ use dom::vrstageparameters::VRStageParameters;
 use dom::vreyeparameters::VREyeParameters;
 use dom::vrframedata::VRFrameData;
 use dom::vrpose::VRPose;
-use heapsize::HeapSizeOf;
 use std::cell::Cell;
 use std::rc::Rc;
 use vr::webvr;
@@ -29,6 +28,7 @@ use vr::webvr;
 #[dom_struct]
 pub struct VRDisplay {
     eventtarget: EventTarget,
+    #[ignore_heap_size_of = "Defined in rust-webvr"]
     display: DOMRefCell<WebVRDisplayData>,
     depth_near: Cell<f64>,
     depth_far: Cell<f64>,
@@ -37,6 +37,7 @@ pub struct VRDisplay {
     right_eye_params: MutHeap<JS<VREyeParameters>>,
     capabilities: MutHeap<JS<VRDisplayCapabilities>>,
     stage_params: MutNullableHeap<JS<VRStageParameters>>,
+    #[ignore_heap_size_of = "Defined in rust-webvr"]
     frame_data: DOMRefCell<WebVRFrameData> 
 }
 
@@ -44,21 +45,10 @@ pub struct VRDisplay {
 #[derive(Clone)]
 pub struct WebVRDisplayData(webvr::VRDisplayData);
 no_jsmanaged_fields!(WebVRDisplayData);
-impl HeapSizeOf for WebVRDisplayData {
-    fn heap_size_of_children(&self) -> usize {
-        0
-    }
-}
 
 #[derive(Clone, Default)]
 pub struct WebVRFrameData(webvr::VRFrameData);
 no_jsmanaged_fields!(WebVRFrameData);
-impl HeapSizeOf for WebVRFrameData {
-    fn heap_size_of_children(&self) -> usize {
-        0
-    }
-}
-
 
 impl VRDisplay {
 
