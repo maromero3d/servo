@@ -11,7 +11,6 @@ use dom::bindings::js::{JS, Root};
 use dom::bindings::reflector::{Reflector, reflect_dom_object};
 use dom::globalscope::GlobalScope;
 use dom::vrfieldofview::VRFieldOfView;
-use heapsize::HeapSizeOf;
 use js::jsapi::{Heap, JSContext, JSObject};
 use std::default::Default;
 use vr::webvr;
@@ -19,6 +18,7 @@ use vr::webvr;
 #[dom_struct]
 pub struct VREyeParameters {
     reflector_: Reflector,
+    #[ignore_heap_size_of = "Defined in rust-webvr"]
     parameters: DOMRefCell<WebVREyeParameters>,
     offset: Heap<*mut JSObject>,
     fov: JS<VRFieldOfView>,
@@ -28,11 +28,6 @@ pub struct VREyeParameters {
 #[derive(Clone)]
 pub struct WebVREyeParameters(webvr::VREyeParameters);
 no_jsmanaged_fields!(WebVREyeParameters);
-impl HeapSizeOf for WebVREyeParameters {
-    fn heap_size_of_children(&self) -> usize {
-        0
-    }
-}
 
 impl VREyeParameters {
 

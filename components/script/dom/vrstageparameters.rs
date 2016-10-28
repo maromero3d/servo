@@ -11,13 +11,13 @@ use dom::bindings::js::Root;
 use dom::bindings::reflector::{Reflector, reflect_dom_object};
 use dom::bindings::num::Finite;
 use dom::globalscope::GlobalScope;
-use heapsize::HeapSizeOf;
 use js::jsapi::{Heap, JSContext, JSObject};
 use vr::webvr;
 
 #[dom_struct]
 pub struct VRStageParameters {
     reflector_: Reflector,
+    #[ignore_heap_size_of = "Defined in rust-webvr"]
     parameters: DOMRefCell<WebVRStageParameters>,
     transform: Heap<*mut JSObject>,
 }
@@ -26,11 +26,6 @@ pub struct VRStageParameters {
 #[derive(Clone)]
 pub struct WebVRStageParameters(webvr::VRStageParameters);
 no_jsmanaged_fields!(WebVRStageParameters);
-impl HeapSizeOf for WebVRStageParameters {
-    fn heap_size_of_children(&self) -> usize {
-        0
-    }
-}
 
 impl VRStageParameters {
 
