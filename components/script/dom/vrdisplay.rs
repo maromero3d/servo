@@ -97,7 +97,7 @@ impl VRDisplay {
             left_eye_params: MutHeap::new(&*VREyeParameters::new(&display.left_eye_parameters, &global)),
             right_eye_params: MutHeap::new(&*VREyeParameters::new(&display.right_eye_parameters, &global)),
             capabilities: MutHeap::new(&*VRDisplayCapabilities::new(&display.capabilities, &global)),
-            stage_params: MutNullableHeap::new(stage.as_ref()),
+            stage_params: MutNullableHeap::new(stage.as_ref().map(|v| &*v)),
             frame_data: DOMRefCell::new(Default::default())
         }
     }
@@ -145,7 +145,7 @@ impl VRDisplayMethods for VRDisplay {
     }
 
     fn DisplayName(&self) -> DOMString {
-        DOMString::from(self.display.borrow().0.display_name)
+        DOMString::from(self.display.borrow().0.display_name.clone())
     }
 
     fn GetFrameData(&self, frameData: &VRFrameData) -> bool {
