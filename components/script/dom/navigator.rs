@@ -118,6 +118,7 @@ impl NavigatorMethods for Navigator {
     }
 
     // https://w3c.github.io/webvr/#interface-navigator
+    #[allow(unrooted_must_root)]
     fn GetVRDisplays(&self) -> Rc<Promise> {
         unimplemented!()
     }

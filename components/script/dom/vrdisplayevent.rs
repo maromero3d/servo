@@ -2,30 +2,20 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-use core::nonzero::NonZero;
 use dom::bindings::codegen::Bindings::EventBinding::EventBinding::EventMethods;
 use dom::bindings::codegen::Bindings::VRDisplayEventBinding;
 use dom::bindings::codegen::Bindings::VRDisplayEventBinding::VRDisplayEventMethods;
 use dom::bindings::codegen::Bindings::VRDisplayEventBinding::VRDisplayEventReason;
-use dom::bindings::codegen::Bindings::VRDisplayEventBinding::VRDisplayEventInit;
 use dom::bindings::error::Fallible;
 use dom::bindings::inheritance::Castable;
 use dom::bindings::js::Root;
-use dom::bindings::reflector::{Reflector, reflect_dom_object};
+use dom::bindings::reflector::reflect_dom_object;
 use dom::bindings::str::DOMString;
-use dom::event::{Event, EventBubbles, EventCancelable};
+use dom::event::Event;
 use dom::globalscope::GlobalScope;
 use dom::vrdisplay::VRDisplay;
-use euclid::size::Size2D;
-use js::jsapi::{Heap, JSContext, JSObject};
-use libc::uint8_t;
-use std::default::Default;
-use std::ptr;
-use std::slice;
-use std::vec::Vec;
 use string_cache::Atom;
 use vr::webvr;
-use heapsize::HeapSizeOf;
 
 #[dom_struct]
 pub struct VRDisplayEvent {
@@ -36,8 +26,7 @@ pub struct VRDisplayEvent {
 
 impl VRDisplayEvent {
 
-    fn new_inherited(global: &GlobalScope,
-                     display: &Root<VRDisplay>,
+    fn new_inherited(display: &Root<VRDisplay>,
                      reason: &Option<VRDisplayEventReason>) 
                      -> VRDisplayEvent {
         VRDisplayEvent {
@@ -54,7 +43,7 @@ impl VRDisplayEvent {
                display: &Root<VRDisplay>,
                reason: &Option<VRDisplayEventReason>)
                -> Root<VRDisplayEvent> {
-        let ev = reflect_dom_object(box VRDisplayEvent::new_inherited(&global, &display, reason),
+        let ev = reflect_dom_object(box VRDisplayEvent::new_inherited(&display, reason),
                            global,
                            VRDisplayEventBinding::Wrap);
         {

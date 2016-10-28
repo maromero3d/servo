@@ -6,19 +6,14 @@ use core::nonzero::NonZero;
 use dom::bindings::cell::DOMRefCell;
 use dom::bindings::codegen::Bindings::VREyeParametersBinding;
 use dom::bindings::codegen::Bindings::VREyeParametersBinding::VREyeParametersMethods;
-use dom::bindings::conversions::{ArrayBufferViewContents, slice_to_array_buffer_view};
+use dom::bindings::conversions::slice_to_array_buffer_view;
 use dom::bindings::js::{JS, Root};
 use dom::bindings::reflector::{Reflector, reflect_dom_object};
 use dom::globalscope::GlobalScope;
 use dom::vrfieldofview::VRFieldOfView;
-use euclid::size::Size2D;
 use heapsize::HeapSizeOf;
 use js::jsapi::{Heap, JSContext, JSObject};
-use libc::uint8_t;
 use std::default::Default;
-use std::ptr;
-use std::slice;
-use std::vec::Vec;
 use vr::webvr;
 
 #[dom_struct]
@@ -41,6 +36,7 @@ impl HeapSizeOf for WebVREyeParameters {
 
 impl VREyeParameters {
 
+    #[allow(unrooted_must_root)]
     fn new_inherited(parameters: &webvr::VREyeParameters, global: &GlobalScope) -> VREyeParameters {
         let mut result = VREyeParameters {
             reflector_: Reflector::new(),
@@ -63,7 +59,8 @@ impl VREyeParameters {
 impl VREyeParametersMethods for VREyeParameters {
 
     // https://w3c.github.io/webvr/#dom-vreyeparameters-offset
-    fn Offset(&self, cx: *mut JSContext) -> NonZero<*mut JSObject> {
+    #[allow(unsafe_code)]
+    fn Offset(&self, _cx: *mut JSContext) -> NonZero<*mut JSObject> {
         unsafe { NonZero::new(self.offset.get()) }
     }
 
