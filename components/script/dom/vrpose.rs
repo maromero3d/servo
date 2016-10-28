@@ -40,7 +40,7 @@ fn update_typed_array(cx: *mut JSContext,
             match *dst.borrow() {
                 Some(ref heap) => unsafe { update_array_buffer_view(heap.get(), data) },
                 None => {
-                    let heap = Heap::default();
+                    let mut heap = Heap::default();
                     heap.set(slice_to_array_buffer_view(cx, data));
                     *dst.borrow_mut() = Some(heap);
                 }
@@ -73,48 +73,49 @@ impl VRPose {
     }
 
     pub fn update(&self, global: &GlobalScope, pose: &webvr::VRPose) {
-        update_typed_array(global.get_cx(), pose.position.map(|v| &v[..]), &self.position);
-        update_typed_array(global.get_cx(), pose.orientation.map(|v| &v[..]), &self.orientation);
-        update_typed_array(global.get_cx(), pose.linear_velocity.map(|v| &v[..]), &self.linear_vel);
-        update_typed_array(global.get_cx(), pose.angular_velocity.map(|v| &v[..]), &self.angular_vel);
-        update_typed_array(global.get_cx(), pose.linear_acceleration.map(|v| &v[..]), &self.linear_acc);
-        update_typed_array(global.get_cx(), pose.angular_acceleration.map(|v| &v[..]), &self.angular_acc);
+        let cx = global.get_cx();
+        update_typed_array(cx, pose.position.as_ref().map(|v| &v[..]), &self.position);
+        update_typed_array(cx, pose.orientation.as_ref().map(|v| &v[..]), &self.orientation);
+        update_typed_array(cx, pose.linear_velocity.as_ref().map(|v| &v[..]), &self.linear_vel);
+        update_typed_array(cx, pose.angular_velocity.as_ref().map(|v| &v[..]), &self.angular_vel);
+        update_typed_array(cx, pose.linear_acceleration.as_ref().map(|v| &v[..]), &self.linear_acc);
+        update_typed_array(cx, pose.angular_acceleration.as_ref().map(|v| &v[..]), &self.angular_acc);
     }
 }
 
 impl VRPoseMethods for VRPose {
     fn GetPosition(&self, cx: *mut JSContext) -> Option<NonZero<*mut JSObject>> {
-        self.position.borrow().map(|v| {
+        self.position.borrow().as_ref().map(|v| {
             unsafe { NonZero::new(v.get()) }
         })
     }
 
     fn GetLinearVelocity(&self, cx: *mut JSContext) -> Option<NonZero<*mut JSObject>> {
-        self.linear_vel.borrow().map(|v| {
+        self.linear_vel.borrow().as_ref().map(|v| {
             unsafe { NonZero::new(v.get()) }
         })
     }
 
     fn GetLinearAcceleration(&self, cx: *mut JSContext) -> Option<NonZero<*mut JSObject>> {
-        self.linear_acc.borrow().map(|v| {
+        self.linear_acc.borrow().as_ref().map(|v| {
             unsafe { NonZero::new(v.get()) }
         })
     }
 
     fn GetOrientation(&self, cx: *mut JSContext) -> Option<NonZero<*mut JSObject>> {
-        self.orientation.borrow().map(|v| {
+        self.orientation.borrow().as_ref().map(|v| {
             unsafe { NonZero::new(v.get()) }
         })
     }
 
     fn GetAngularVelocity(&self, cx: *mut JSContext) -> Option<NonZero<*mut JSObject>> {
-        self.angular_vel.borrow().map(|v| {
+        self.angular_vel.borrow().as_ref().map(|v| {
             unsafe { NonZero::new(v.get()) }
         })
     }
 
     fn GetAngularAcceleration(&self, cx: *mut JSContext) -> Option<NonZero<*mut JSObject>> {
-        self.angular_acc.borrow().map(|v| {
+        self.angular_acc.borrow().as_ref().map(|v| {
             unsafe { NonZero::new(v.get()) }
         })
     }
