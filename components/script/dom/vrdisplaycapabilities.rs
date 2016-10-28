@@ -8,12 +8,12 @@ use dom::bindings::codegen::Bindings::VRDisplayCapabilitiesBinding::VRDisplayCap
 use dom::bindings::js::Root;
 use dom::bindings::reflector::{Reflector, reflect_dom_object};
 use dom::globalscope::GlobalScope;
-use heapsize::HeapSizeOf;
 use vr::webvr;
 
 #[dom_struct]
 pub struct VRDisplayCapabilities {
     reflector_: Reflector,
+    #[ignore_heap_size_of = "Defined in rust-webvr"]
     capabilities: DOMRefCell<WebVRDisplayCapabilities>
 }
 
@@ -21,11 +21,6 @@ pub struct VRDisplayCapabilities {
 #[derive(Clone)]
 pub struct WebVRDisplayCapabilities(webvr::VRDisplayCapabilities);
 no_jsmanaged_fields!(WebVRDisplayCapabilities);
-impl HeapSizeOf for WebVRDisplayCapabilities {
-    fn heap_size_of_children(&self) -> usize {
-        0
-    }
-}
 
 impl VRDisplayCapabilities {
 
