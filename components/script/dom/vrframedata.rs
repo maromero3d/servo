@@ -108,6 +108,6 @@ impl VRFrameDataMethods for VRFrameData {
     }
 
     fn Pose(&self) -> Root<VRPose> {
-        self.pose
+        Root::form_ref(&*self.pose)
     }
 }
