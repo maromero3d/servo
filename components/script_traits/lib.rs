@@ -34,6 +34,7 @@ extern crate serde_derive;
 extern crate style_traits;
 extern crate time;
 extern crate url;
+extern crate vr;
 
 mod script_msg;
 pub mod webdriver_msg;
@@ -68,6 +69,7 @@ use std::fmt;
 use std::sync::mpsc::{Receiver, Sender};
 use style_traits::{PagePx, UnsafeNode, ViewportPx};
 use url::Url;
+use vr::WebVRMsg;
 use webdriver_msg::{LoadStatus, WebDriverScriptCommand};
 
 pub use script_msg::{LayoutMsg, ScriptMsg, EventResult, LogEntry};
@@ -460,6 +462,8 @@ pub struct InitialScriptState {
     pub pipeline_namespace_id: PipelineNamespaceId,
     /// A ping will be sent on this channel once the script thread shuts down.
     pub content_process_shutdown_chan: IpcSender<()>,
+    /// A channel to the webvr thread, if available.
+    pub webvr_thread: Option<IpcSender<WebVRMsg>>
 }
 
 /// This trait allows creating a `ScriptThread` without depending on the `script`

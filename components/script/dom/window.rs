@@ -106,6 +106,7 @@ use url::Url;
 use util::geometry::{self, max_rect};
 use util::opts;
 use util::prefs::PREFS;
+use vr::WebVRMsg;
 use webdriver_handlers::jsval_to_webdriver;
 
 /// Current state of the window object
@@ -242,6 +243,9 @@ pub struct Window {
     media_query_lists: WeakMediaQueryListVec,
 
     test_runner: MutNullableHeap<JS<TestRunner>>,
+    /// A handle for communicating messages to the webvr thread, if available.
+    #[ignore_heap_size_of = "channels are hard"]
+    webvr_thread: Option<IpcSender<WebVRMsg>>
 }
 
 impl Window {
@@ -321,6 +325,10 @@ impl Window {
 
     pub fn current_viewport(&self) -> Rect<Au> {
         self.current_viewport.clone().get()
+    }
+
+    pub fn webvr_thread(&self) -> Option<IpcSender<WebVRMsg>> {
+        self.webvr_thread.clone()
     }
 }
 
@@ -1532,7 +1540,8 @@ impl Window {
                layout_chan: Sender<Msg>,
                id: PipelineId,
                parent_info: Option<(PipelineId, FrameType)>,
-               window_size: Option<WindowSizeData>)
+               window_size: Option<WindowSizeData>,
+               webvr_thread: Option<IpcSender<WebVRMsg>>)
                -> Root<Window> {
         let layout_rpc: Box<LayoutRPC> = {
             let (rpc_send, rpc_recv) = channel();
@@ -1596,6 +1605,7 @@ impl Window {
             scroll_offsets: DOMRefCell::new(HashMap::new()),
             media_query_lists: WeakMediaQueryListVec::new(),
             test_runner: Default::default(),
+            webvr_thread: webvr_thread
         };
 
         WindowBinding::Wrap(runtime.cx(), win)

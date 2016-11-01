@@ -65,6 +65,7 @@ use util::opts;
 use util::prefs::PREFS;
 use util::remutex::ReentrantMutex;
 use util::thread::spawn_named;
+use vr::WebVRMsg;
 use webrender_traits;
 
 #[derive(Debug, PartialEq)]
@@ -184,6 +185,9 @@ pub struct Constellation<Message, LTF, STF> {
     /// The random number generator and probability for closing pipelines.
     /// This is for testing the hardening of the constellation.
     random_pipeline_closure: Option<(StdRng, f32)>,
+
+    /// A channel through which messages can be sent to the webvr thread.
+    webvr_thread: Option<IpcSender<WebVRMsg>>,
 }
 
 /// State needed to construct a constellation.
@@ -210,6 +214,8 @@ pub struct InitialConstellationState {
     pub supports_clipboard: bool,
     /// Webrender API.
     pub webrender_api_sender: webrender_traits::RenderApiSender,
+    /// A channel to the webvr thread.
+    pub webvr_thread: Option<IpcSender<WebVRMsg>>,
 }
 
 #[derive(Debug, Clone)]
@@ -523,6 +529,7 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
                     info!("Using seed {} for random pipeline closure.", seed);
                     (rng, prob)
                 }),
+                webvr_thread: state.webvr_thread
             };
 
             constellation.run();
@@ -597,6 +604,7 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
             prev_visibility: prev_visibility,
             webrender_api_sender: self.webrender_api_sender.clone(),
             is_private: is_private,
+            webvr_thread: self.webvr_thread.clone()
         });
 
         let (pipeline, child_process) = match result {

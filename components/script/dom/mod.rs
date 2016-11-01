@@ -417,6 +417,7 @@ pub mod validation;
 pub mod validitystate;
 pub mod values;
 pub mod virtualmethods;
+pub mod vr;
 pub mod vrdisplay;
 pub mod vrdisplaycapabilities;
 pub mod vrdisplayevent;

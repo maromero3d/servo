@@ -86,10 +86,11 @@ impl VRDisplayEvent {
     }
 
     pub fn Constructor(global: &GlobalScope,
+                       type_: DOMString,
                        init: &VRDisplayEventBinding::VRDisplayEventInit)
                        -> Fallible<Root<VRDisplayEvent>> {
         Ok(VRDisplayEvent::new(global,
-                            Atom::from(DOMString::from("")),
+                            Atom::from(type_),
                             init.parent.bubbles,
                             init.parent.cancelable,
                             &init.display,
