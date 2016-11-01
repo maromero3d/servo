@@ -48,6 +48,7 @@ pub extern crate script_layout_interface;
 pub extern crate servo_config;
 pub extern crate servo_url;
 pub extern crate style;
+pub extern crate vr;
 
 #[cfg(feature = "webdriver")]
 extern crate webdriver_server;
@@ -96,6 +97,7 @@ use std::cmp::max;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::mpsc::Sender;
+use vr::{WebVRMsg, WebVRThread};
 
 pub use gleam::gl;
 pub use servo_config as config;
@@ -277,6 +279,12 @@ fn create_constellation(user_agent: Cow<'static, str>,
 
     let resource_sender = public_resource_threads.sender();
 
+    let webvr_thread: Option<IpcSender<WebVRMsg>> = if cfg!(target_os = "windows") {
+        Some(WebVRThread::spawn())
+    } else {
+        None
+    };
+
     let initial_state = InitialConstellationState {
         compositor_proxy: compositor_proxy,
         debugger_chan: debugger_chan,
@@ -290,6 +298,7 @@ fn create_constellation(user_agent: Cow<'static, str>,
         mem_profiler_chan: mem_profiler_chan,
         supports_clipboard: supports_clipboard,
         webrender_api_sender: webrender_api_sender,
+        webvr_thread: webvr_thread
     };
     let (constellation_chan, from_swmanager_sender) =
         Constellation::<script_layout_interface::message::Msg,

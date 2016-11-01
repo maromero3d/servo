@@ -10,12 +10,10 @@ use dom::bindings::str::DOMString;
 use dom::bluetooth::Bluetooth;
 use dom::mimetypearray::MimeTypeArray;
 use dom::navigatorinfo;
-use dom::promise::Promise;
 use dom::pluginarray::PluginArray;
 use dom::serviceworkercontainer::ServiceWorkerContainer;
+use dom::vr::VR;
 use dom::window::Window;
-
-use std::rc::Rc;
 
 #[dom_struct]
 pub struct Navigator {
@@ -24,6 +22,7 @@ pub struct Navigator {
     plugins: MutNullableJS<PluginArray>,
     mime_types: MutNullableJS<MimeTypeArray>,
     service_worker: MutNullableJS<ServiceWorkerContainer>,
+    vr: MutNullableHeap<JS<VR>>
 }
 
 impl Navigator {
@@ -34,6 +33,7 @@ impl Navigator {
             plugins: Default::default(),
             mime_types: Default::default(),
             service_worker: Default::default(),
+            vr: Default::default(),
         }
     }
 
@@ -119,13 +119,8 @@ impl NavigatorMethods for Navigator {
 
     // https://w3c.github.io/webvr/#interface-navigator
     #[allow(unrooted_must_root)]
-    fn GetVRDisplays(&self) -> Rc<Promise> {
-        unimplemented!()
-    }
-
-    // https://w3c.github.io/webvr/#interface-navigator
-    fn VrEnabled(&self) -> bool {
-        unimplemented!()
+    fn Vr(&self) -> Root<VR> {
+        self.vr.or_init(|| VR::new(&self.global()))
     }
 
 }
