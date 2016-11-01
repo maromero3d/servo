@@ -10,7 +10,7 @@ enum VRDisplayEventReason {
   "unmounted",
 };
 
-[Constructor(VRDisplayEventInit eventInitDict)]
+[Constructor(DOMString type, VRDisplayEventInit eventInitDict)]
 interface VRDisplayEvent : Event {
   readonly attribute VRDisplay display;
   readonly attribute VRDisplayEventReason? reason;

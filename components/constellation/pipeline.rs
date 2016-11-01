@@ -37,6 +37,7 @@ use style_traits::{PagePx, ViewportPx};
 use url::Url;
 use util::opts::{self, Opts};
 use util::prefs::{PREFS, Pref};
+use vr::WebVRMsg;
 use webrender_traits;
 
 pub enum ChildProcess {
@@ -126,6 +127,8 @@ pub struct InitialPipelineState {
     pub webrender_api_sender: webrender_traits::RenderApiSender,
     /// Whether this pipeline is considered private.
     pub is_private: bool,
+    /// A channel to the webvr thread.
+    pub webvr_thread: Option<IpcSender<WebVRMsg>>,
 }
 
 impl Pipeline {
@@ -229,6 +232,7 @@ impl Pipeline {
                 script_content_process_shutdown_chan: script_content_process_shutdown_chan,
                 script_content_process_shutdown_port: script_content_process_shutdown_port,
                 webrender_api_sender: state.webrender_api_sender,
+                webvr_thread: state.webvr_thread,
             };
 
             // Spawn the child process.
@@ -406,6 +410,7 @@ pub struct UnprivilegedPipelineContent {
     script_content_process_shutdown_chan: IpcSender<()>,
     script_content_process_shutdown_port: IpcReceiver<()>,
     webrender_api_sender: webrender_traits::RenderApiSender,
+    webvr_thread: Option<IpcSender<WebVRMsg>>,
 }
 
 impl UnprivilegedPipelineContent {
@@ -430,6 +435,7 @@ impl UnprivilegedPipelineContent {
             window_size: self.window_size,
             pipeline_namespace_id: self.pipeline_namespace_id,
             content_process_shutdown_chan: self.script_content_process_shutdown_chan,
+            webvr_thread: self.webvr_thread
         }, self.load_data.clone());
 
         LTF::create(self.id,

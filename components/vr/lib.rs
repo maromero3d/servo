@@ -3,8 +3,17 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #![feature(plugin)]
-#![plugin(plugins)]
-
+#![feature(custom_derive)]
+#![feature(proc_macro)]
 #![deny(unsafe_code)]
 
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+
 pub extern crate webvr;
+extern crate ipc_channel;
+extern crate util;
+
+mod webvr_thread;
+pub use webvr_thread::{WebVRMsg, WebVRThread};
