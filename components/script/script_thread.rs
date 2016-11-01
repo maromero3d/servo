@@ -113,6 +113,7 @@ use time::Tm;
 use url::Position;
 use util::opts;
 use util::thread;
+use vr::WebVRMsg;
 use webdriver_handlers;
 
 thread_local!(pub static STACK_ROOTS: Cell<Option<RootCollectionPtr>> = Cell::new(None));
@@ -469,6 +470,8 @@ pub struct ScriptThread {
     content_process_shutdown_chan: IpcSender<()>,
 
     promise_job_queue: PromiseJobQueue,
+    /// A handle to the webvr thread, if available
+    webvr_thread: Option<IpcSender<WebVRMsg>>,
 }
 
 /// In the event of thread panic, all data on the stack runs its destructor. However, there
@@ -681,6 +684,7 @@ impl ScriptThread {
             content_process_shutdown_chan: state.content_process_shutdown_chan,
 
             promise_job_queue: PromiseJobQueue::new(),
+            webvr_thread: state.webvr_thread
         }
     }
 
@@ -1706,7 +1710,8 @@ impl ScriptThread {
                                  incomplete.layout_chan,
                                  incomplete.pipeline_id,
                                  incomplete.parent_info,
-                                 incomplete.window_size);
+                                 incomplete.window_size,
+                                 self.webvr_thread.clone());
         let frame_element = frame_element.r().map(Castable::upcast);
 
         let browsing_context = BrowsingContext::new(&window, frame_element);

@@ -35,6 +35,7 @@ serde_derive = "0.8"
 style_traits = {path = "../style_traits"}
 servo_url = {path = "../url", features = ["servo"]}
 util = {path = "../util"}
+vr = {path = "../vr"}
 
 [dependencies.webrender_traits]
 git = "https://github.com/servo/webrender"

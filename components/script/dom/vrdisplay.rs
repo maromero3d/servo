@@ -52,7 +52,7 @@ no_jsmanaged_fields!(WebVRFrameData);
 
 impl VRDisplay {
 
-    fn new_inherited(display:&webvr::VRDisplayData, global: &GlobalScope) -> VRDisplay {
+    fn new_inherited(global: &GlobalScope, display:&webvr::VRDisplayData) -> VRDisplay {
 
         let stage = match display.stage_parameters {
             Some(ref params) => Some(VRStageParameters::new(&params, &global)),
@@ -73,8 +73,8 @@ impl VRDisplay {
         }
     }
 
-    pub fn new(display:&webvr::VRDisplayData, global: &GlobalScope) -> Root<VRDisplay> {
-        reflect_dom_object(box VRDisplay::new_inherited(display, global),
+    pub fn new(global: &GlobalScope, display:&webvr::VRDisplayData) -> Root<VRDisplay> {
+        reflect_dom_object(box VRDisplay::new_inherited(&global, &display),
                            global,
                            VRDisplayBinding::Wrap)
     }
@@ -168,5 +168,15 @@ impl VRDisplayMethods for VRDisplay {
 
     fn SubmitFrame(&self) -> () {
         unimplemented!()
+    }
+}
+
+impl VRDisplay {
+    pub fn get_display_id(&self) -> u64 {
+        self.display.borrow().0.display_id
+    }
+
+    pub fn update_display(&self, display: &webvr::VRDisplayData) {
+        self.display.borrow_mut().0 = display.clone()
     }
 }

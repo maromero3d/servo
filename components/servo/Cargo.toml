@@ -60,6 +60,7 @@ servo_url = {path = "../url"}
 style = {path = "../style", features = ["servo"]}
 url = "1.2"
 util = {path = "../util"}
+vr = {path = "../vr"}
 webdriver_server = {path = "../webdriver_server", optional = true}
 
 [dependencies.webrender]
