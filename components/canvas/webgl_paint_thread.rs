@@ -243,8 +243,8 @@ impl WebGLPaintThread {
                     unsafe { gl::Scissor(0, 0, size.width, size.height); }
                 }
             }
-            WebGLPaintTaskData::WebRender(_, _) => {
-                // TODO
+            WebGLPaintTaskData::WebRender(ref api, id) => {
+                api.resize_webgl_context(id, &size);
             }
         }
 
