@@ -9,7 +9,7 @@ use dom::bindings::conversions::{slice_to_array_buffer_view, update_array_buffer
 use dom::bindings::error::Fallible;
 use dom::bindings::js::Root;
 use dom::bindings::num::Finite;
-use dom::bindings::reflector::{Reflector, reflect_dom_object};
+use dom::bindings::reflector::{Reflectable, Reflector, reflect_dom_object};
 use dom::globalscope::GlobalScope;
 use dom::vrpose::VRPose;
 use js::jsapi::{Heap, JSContext, JSObject};
@@ -77,6 +77,7 @@ impl VRFrameData {
             update_array_buffer_view(self.right_proj.get(), &data.right_projection_matrix);
             update_array_buffer_view(self.right_view.get(), &data.right_view_matrix);
         }
+        self.pose.update(&self.global(), &data.pose);
         self.timestamp.set(data.timestamp);
     }
 }

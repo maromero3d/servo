@@ -31,14 +31,16 @@ fn update_typed_array(cx: *mut JSContext,
 
     match src {
         Some(data) => {
-            match *dst.borrow() {
-                Some(ref heap) => unsafe { update_array_buffer_view(heap.get(), data) },
-                None => {
-                    let mut heap = Heap::default();
-                    heap.set(slice_to_array_buffer_view(cx, data));
-                    *dst.borrow_mut() = Some(heap);
+            if let Some(ref heap) = *dst.borrow() {
+                unsafe { 
+                    update_array_buffer_view(heap.get(), data)
                 }
-            }
+                return;
+            } 
+            let mut heap = Heap::default();
+            heap.set(slice_to_array_buffer_view(cx, data));
+            *dst.borrow_mut() = Some(heap);
+            
         },
         None => *dst.borrow_mut() = None
     }
