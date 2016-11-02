@@ -21,7 +21,7 @@ pub struct WebVRThread {
 impl WebVRThread {
     fn new (receiver: IpcReceiver<WebVRMsg>) -> WebVRThread {
         let mut service = VRServiceManager::new();
-        service.register_mock();
+        service.register_defaults();
         WebVRThread {
             receiver: receiver,
             service: service
