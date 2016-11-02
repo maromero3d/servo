@@ -21,9 +21,12 @@ use dom::vrstageparameters::VRStageParameters;
 use dom::vreyeparameters::VREyeParameters;
 use dom::vrframedata::VRFrameData;
 use dom::vrpose::VRPose;
+use ipc_channel::ipc;
+use ipc_channel::ipc::IpcSender;
 use std::cell::Cell;
 use std::rc::Rc;
 use vr::webvr;
+use vr::WebVRMsg;
 
 #[dom_struct]
 pub struct VRDisplay {
@@ -93,7 +96,7 @@ impl VRDisplayMethods for VRDisplay {
     }
 
     fn IsPresenting(&self) -> bool {
-        unimplemented!()
+        false
     }
 
     fn Capabilities(&self) -> Root<VRDisplayCapabilities> {
@@ -120,6 +123,23 @@ impl VRDisplayMethods for VRDisplay {
     }
 
     fn GetFrameData(&self, frameData: &VRFrameData) -> bool {
+        //TODO: sync with compositor
+        if let Some(wevbr_sender) = self.webvr_thread() {
+            let (sender, receiver) = ipc::channel().unwrap();
+            wevbr_sender.send(WebVRMsg::GetFrameData(self.get_display_id(),
+                                                     self.depth_near.get(),
+                                                     self.depth_far.get(),
+                                                     sender)).unwrap();
+            match receiver.recv().unwrap() {
+                Ok(data) => {
+                    self.frame_data.borrow_mut().0 = data;
+                },
+                Err(e) => {
+                    error!("WebVR::GetFrameData: {:?}", e);
+                }
+            }
+        }
+
         frameData.update(&self.frame_data.borrow().0);
         true
     }
@@ -129,7 +149,9 @@ impl VRDisplayMethods for VRDisplay {
     }
 
     fn ResetPose(&self) -> () {
-        unimplemented!()
+        if let Some(wevbr_sender) = self.webvr_thread() {
+            wevbr_sender.send(WebVRMsg::ResetPose(self.get_display_id(), None)).unwrap();
+        }
     }
 
     fn DepthNear(&self) -> Finite<f64> {
@@ -172,6 +194,11 @@ impl VRDisplayMethods for VRDisplay {
 }
 
 impl VRDisplay {
+
+    fn webvr_thread(&self) -> Option<IpcSender<WebVRMsg>> {
+        self.global().as_window().webvr_thread()
+    }
+
     pub fn get_display_id(&self) -> u64 {
         self.display.borrow().0.display_id
     }
