@@ -15,8 +15,9 @@ use dom::vrdisplay::VRDisplay;
 use ipc_channel::ipc;
 use ipc_channel::ipc::IpcSender;
 use std::rc::Rc;
-use vr::webvr;
-use vr::WebVRMsg;
+use script_traits::WebVREventMsg;
+use vr_traits::webvr;
+use vr_traits::WebVRMsg;
 
 #[dom_struct]
 pub struct VR {
@@ -107,5 +108,9 @@ impl VR {
             let root = VRDisplay::new(&self.global(), &display);
             self.displays.borrow_mut().push(JS::from_ref(&*root));
         }
+    }
+
+    pub fn handle_webvr_event(&self, event: WebVREventMsg) {
+        
     }
 }
