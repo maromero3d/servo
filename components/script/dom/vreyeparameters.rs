@@ -13,7 +13,7 @@ use dom::globalscope::GlobalScope;
 use dom::vrfieldofview::VRFieldOfView;
 use js::jsapi::{Heap, JSContext, JSObject};
 use std::default::Default;
-use vr::webvr;
+use vr_traits::webvr;
 
 #[dom_struct]
 pub struct VREyeParameters {

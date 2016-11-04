@@ -1,48 +1,58 @@
-use webvr::*;
+use vr_traits::{WebVRMsg, WebVRResult};
+use vr_traits::webvr::*;
+
 use ipc_channel::ipc;
 use ipc_channel::ipc::{IpcReceiver, IpcSender};
 use util::thread::spawn_named;
-
-pub type WebVRResult<T> = Result<T, String>;
-
-#[derive(Deserialize, Serialize)]
-pub enum WebVRMsg {
-    GetVRDisplays(IpcSender<WebVRResult<Vec<VRDisplayData>>>),
-    GetFrameData(u64, f64, f64, IpcSender<WebVRResult<VRFrameData>>),
-    ResetPose(u64, Option<IpcSender<WebVRResult<()>>>),
-    Exit,
-}
+use std::collections::HashSet;
+use msg::constellation_msg::PipelineId;
+use script_traits::{ConstellationMsg, WebVREventMsg};
+use std::sync::mpsc::Sender;
 
 pub struct WebVRThread {
     receiver: IpcReceiver<WebVRMsg>,
-    service: VRServiceManager
+    service: VRServiceManager,
+    contexts: HashSet<PipelineId>,
+    constellation_chan: Sender<ConstellationMsg>
 }
 
 impl WebVRThread {
-    fn new (receiver: IpcReceiver<WebVRMsg>) -> WebVRThread {
+    fn new (receiver: IpcReceiver<WebVRMsg>, constellation_chan: Sender<ConstellationMsg>) -> WebVRThread {
         let mut service = VRServiceManager::new();
         service.register_defaults();
         WebVRThread {
             receiver: receiver,
-            service: service
+            service: service,
+            contexts: HashSet::new(),
+            constellation_chan: constellation_chan
         }
     }
 
-    pub fn spawn() -> IpcSender<WebVRMsg> {
+    pub fn spawn(constellation_chan: Sender<ConstellationMsg>) -> IpcSender<WebVRMsg> {
         let (sender, receiver) = ipc::channel().unwrap();
         spawn_named("WebVRThread".into(), move || {
-            WebVRThread::new(receiver).start();
+            WebVRThread::new(receiver, constellation_chan).start();
         });
         sender
     }
 
     fn start(&mut self) {
+
         while let Ok(msg) = self.receiver.recv() {
             match msg {
+                WebVRMsg::RegisterContext(context) => {
+                    self.handle_register_context(context);
+                },
+                WebVRMsg::UnregisterContext(context) => {
+                    self.handle_unregister_context(context);
+                },
                 WebVRMsg::GetVRDisplays(sender) => {
                     self.handle_get_displays(sender)
                 },
                 WebVRMsg::GetFrameData(device_id, near, far, sender) => {
+                    // TODO: create a timer to poll events
+                    //self.poll_events();
+
                     self.handle_framedata(device_id, near, far, sender)
                 },
                 WebVRMsg::ResetPose(device_id, sender) => {
@@ -53,6 +63,14 @@ impl WebVRThread {
                 },
             }
         }
+    }
+
+    fn handle_register_context(&mut self, ctx: PipelineId) {
+        self.contexts.insert(ctx);
+    }
+
+    fn handle_unregister_context(&mut self, ctx: PipelineId) {
+        self.contexts.remove(&ctx);
     }
 
     fn handle_get_displays(&mut self, sender: IpcSender<WebVRResult<Vec<VRDisplayData>>>) {
@@ -90,5 +108,17 @@ impl WebVRThread {
             }
         }
     }
+
+    fn poll_events(&mut self) {
+        let events = self.service.poll_events();
+        if events.len() > 0 {
+            let pipeline_ids: Vec<PipelineId> = self.contexts.iter().map(|c| *c).collect();
+            for event in events {
+                let event = WebVREventMsg::DisplayEvent(event);
+                self.constellation_chan.send(ConstellationMsg::WebVREvent(pipeline_ids.clone(), event)).unwrap();
+            }
+        }
+    }
+
 }
 

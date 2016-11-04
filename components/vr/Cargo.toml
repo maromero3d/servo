@@ -10,10 +10,10 @@ name = "vr"
 path = "lib.rs"
 
 [dependencies]
-webvr = {path = "C:\\Users\\mortimer\\Projects\\rust-webvr", features = ["serde-serialization"] }
-util = {path = "../util"}
 ipc-channel = "0.5"
-serde = "0.8"
-serde_derive = "0.8"
+msg = {path = "../msg"}
+util = {path = "../util"}
+script_traits = {path = "../script_traits"}
+vr_traits = {path = "../vr_traits" }
 
 
