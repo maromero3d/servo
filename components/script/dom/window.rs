@@ -106,7 +106,7 @@ use url::Url;
 use util::geometry::{self, max_rect};
 use util::opts;
 use util::prefs::PREFS;
-use vr::WebVRMsg;
+use vr_traits::WebVRMsg;
 use webdriver_handlers::jsval_to_webdriver;
 
 /// Current state of the window object

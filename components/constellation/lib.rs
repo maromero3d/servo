@@ -40,7 +40,7 @@ extern crate style_traits;
 extern crate url;
 #[macro_use]
 extern crate util;
-extern crate vr;
+extern crate vr_traits;
 extern crate webrender_traits;
 
 mod constellation;
