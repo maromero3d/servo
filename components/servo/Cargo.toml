@@ -102,8 +102,3 @@ android_glue = "0.2"
 
 [target.'cfg(not(target_os = "windows"))'.dependencies]
 gaol = {git = "https://github.com/servo/gaol"}
-
-[replace]
-"webrender:0.8.0" = { path = "C:\\Users\\mortimer\\Projects\\webrender\\webrender" }
-"webrender_traits:0.8.0" = { path = "C:\\Users\\mortimer\\Projects\\webrender\\webrender_traits" }
-"webvr:0.1.0" = { path = "C:\\Users\\mortimer\\Projects\\rust-webvr" }
