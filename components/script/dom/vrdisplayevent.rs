@@ -14,7 +14,7 @@ use dom::bindings::str::DOMString;
 use dom::event::Event;
 use dom::globalscope::GlobalScope;
 use dom::vrdisplay::VRDisplay;
-use string_cache::Atom;
+use servo_atoms::Atom;
 use vr_traits::webvr;
 
 #[dom_struct]
