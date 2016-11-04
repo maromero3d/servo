@@ -37,7 +37,7 @@ use std::sync::mpsc::Sender;
 use style_traits::{PagePx, ViewportPx};
 use util::opts::{self, Opts};
 use util::prefs::{PREFS, Pref};
-use vr::WebVRMsg;
+use vr_traits::WebVRMsg;
 use webrender_traits;
 
 pub enum ChildProcess {

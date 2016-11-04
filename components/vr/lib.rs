@@ -7,13 +7,11 @@
 #![feature(proc_macro)]
 #![deny(unsafe_code)]
 
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-
-pub extern crate webvr;
 extern crate ipc_channel;
+extern crate msg;
 extern crate util;
+extern crate script_traits;
+extern crate vr_traits;
 
 mod webvr_thread;
-pub use webvr_thread::{WebVRMsg, WebVRThread};
+pub use webvr_thread::WebVRThread;

@@ -25,8 +25,8 @@ use ipc_channel::ipc;
 use ipc_channel::ipc::IpcSender;
 use std::cell::Cell;
 use std::rc::Rc;
-use vr::webvr;
-use vr::WebVRMsg;
+use vr_traits::webvr;
+use vr_traits::WebVRMsg;
 
 #[dom_struct]
 pub struct VRDisplay {
