@@ -109,7 +109,7 @@ use timers::{IsInterval, TimerCallback};
 #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))]
 use tinyfiledialogs::{self, MessageBoxIcon};
 use url::Position;
-use vr::WebVRMsg;
+use vr_traits::WebVRMsg;
 use webdriver_handlers::jsval_to_webdriver;
 
 /// Current state of the window object

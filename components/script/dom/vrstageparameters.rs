@@ -12,7 +12,7 @@ use dom::bindings::reflector::{Reflector, reflect_dom_object};
 use dom::bindings::num::Finite;
 use dom::globalscope::GlobalScope;
 use js::jsapi::{Heap, JSContext, JSObject};
-use vr::webvr;
+use vr_traits::webvr;
 
 #[dom_struct]
 pub struct VRStageParameters {

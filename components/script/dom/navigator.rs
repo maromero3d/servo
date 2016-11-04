@@ -14,6 +14,7 @@ use dom::pluginarray::PluginArray;
 use dom::serviceworkercontainer::ServiceWorkerContainer;
 use dom::vr::VR;
 use dom::window::Window;
+use script_traits::WebVREventMsg;
 
 #[dom_struct]
 pub struct Navigator {
@@ -123,4 +124,12 @@ impl NavigatorMethods for Navigator {
         self.vr.or_init(|| VR::new(&self.global()))
     }
 
+}
+
+impl Navigator {
+     pub fn handle_webvr_event(&self, event: WebVREventMsg) {
+         if let Some(vr) = self.vr.get() {
+             vr.handle_webvr_event(event);
+         }
+     }
 }

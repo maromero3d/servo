@@ -9,7 +9,7 @@ use dom::bindings::js::Root;
 use dom::bindings::num::Finite;
 use dom::bindings::reflector::{Reflector, reflect_dom_object};
 use dom::globalscope::GlobalScope;
-use vr::webvr;
+use vr_traits::webvr;
 
 #[dom_struct]
 pub struct VRFieldOfView {

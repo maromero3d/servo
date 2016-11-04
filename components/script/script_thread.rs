@@ -94,6 +94,7 @@ use serviceworkerjob::{Job, JobQueue, AsyncJobHandler, FinishJobHandler, InvokeT
 use servo_config::opts;
 use servo_url::ServoUrl;
 use std::cell::Cell;
+use script_traits::WebVREventMsg;
 use std::collections::{hash_map, HashMap, HashSet};
 use std::option::Option;
 use std::ptr;
@@ -114,7 +115,7 @@ use task_source::networking::NetworkingTaskSource;
 use task_source::user_interaction::{UserInteractionTask, UserInteractionTaskSource};
 use time::Tm;
 use url::Position;
-use vr::WebVRMsg;
+use vr_traits::WebVRMsg;
 use webdriver_handlers;
 
 thread_local!(pub static STACK_ROOTS: Cell<Option<RootCollectionPtr>> = Cell::new(None));
@@ -1013,6 +1014,8 @@ impl ScriptThread {
                 self.handle_reload(pipeline_id),
             ConstellationControlMsg::ExitPipeline(pipeline_id) =>
                 self.handle_exit_pipeline_msg(pipeline_id),
+            ConstellationControlMsg::WebVREvent(pipeline_id, event) =>
+                self.handle_webvr_event(pipeline_id, event),
             msg @ ConstellationControlMsg::AttachLayout(..) |
             msg @ ConstellationControlMsg::Viewport(..) |
             msg @ ConstellationControlMsg::SetScrollState(..) |
@@ -2182,6 +2185,14 @@ impl ScriptThread {
     fn handle_reload(&self, pipeline_id: PipelineId) {
         if let Some(window) = self.documents.borrow().find_window(pipeline_id) {
             window.Location().Reload();
+        }
+    }
+
+    fn handle_webvr_event(&self, pipeline_id: PipelineId, event: WebVREventMsg) {
+        if let Some(context) = self.find_child_context(pipeline_id) {
+            let win = context.active_window();
+            let navigator = win.Navigator();
+            navigator.handle_webvr_event(event);
         }
     }
 

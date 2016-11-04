@@ -35,7 +35,7 @@ use std::process;
 use std::rc::Rc;
 use std::sync::mpsc::Sender;
 use style_traits::{PagePx, ViewportPx};
-use vr::WebVRMsg;
+use vr_traits::WebVRMsg;
 use webrender_traits;
 
 /// A uniquely-identifiable pipeline of script thread, layout thread, and paint thread.

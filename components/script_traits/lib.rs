@@ -34,7 +34,7 @@ extern crate serde_derive;
 extern crate servo_url;
 extern crate style_traits;
 extern crate time;
-extern crate vr;
+extern crate vr_traits;
 
 mod script_msg;
 pub mod webdriver_msg;
@@ -70,7 +70,8 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::mpsc::{Receiver, Sender};
 use style_traits::{PagePx, UnsafeNode, ViewportPx};
-use vr::WebVRMsg;
+use vr_traits::WebVRMsg;
+use vr_traits::webvr::VRDisplayEvent;
 use webdriver_msg::{LoadStatus, WebDriverScriptCommand};
 
 pub use script_msg::{LayoutMsg, ScriptMsg, EventResult, LogEntry};
@@ -254,7 +255,9 @@ pub enum ConstellationControlMsg {
     /// Report an error from a CSS parser for the given pipeline
     ReportCSSError(PipelineId, String, usize, usize, String),
     /// Reload the given page.
-    Reload(PipelineId)
+    Reload(PipelineId),
+    /// Notifies the script thread of a WebVR device event
+    WebVREvent(PipelineId, WebVREventMsg)
 }
 
 impl fmt::Debug for ConstellationControlMsg {
@@ -286,7 +289,8 @@ impl fmt::Debug for ConstellationControlMsg {
             DispatchStorageEvent(..) => "DispatchStorageEvent",
             FramedContentChanged(..) => "FramedContentChanged",
             ReportCSSError(..) => "ReportCSSError",
-            Reload(..) => "Reload"
+            Reload(..) => "Reload",
+            WebVREvent(..) => "WebVREvent"
         })
     }
 }
@@ -714,6 +718,18 @@ pub enum ConstellationMsg {
     Reload,
     /// A log entry, with the top-level frame id and thread name
     LogEntry(Option<FrameId>, Option<String>, LogEntry),
+    /// Sets the WebVR thread channel
+    SetWebVRThread(IpcSender<WebVRMsg>),
+    /// Dispatch a WebVR event to the subscribed script threads
+    WebVREvent(Vec<PipelineId>, WebVREventMsg),
+}
+
+/// Messages to the constellation originating from the WebVR thread.
+/// Used to dispatch VR Headset state events: connected, unconnected, and more.
+#[derive(Deserialize, Serialize, Clone)]
+pub enum WebVREventMsg {
+    /// Inform the constellation of a VR display event.
+    DisplayEvent(VRDisplayEvent)
 }
 
 /// Resources required by workerglobalscopes

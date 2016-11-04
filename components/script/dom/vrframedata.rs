@@ -15,7 +15,7 @@ use dom::vrpose::VRPose;
 use js::jsapi::{Heap, JSContext, JSObject};
 use std::cell::Cell;
 use time;
-use vr::webvr;
+use vr_traits::webvr;
 
 #[dom_struct]
 pub struct VRFrameData {
