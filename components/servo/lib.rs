@@ -99,7 +99,6 @@ use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::mpsc::Sender;
 use vr::WebVRThread;
-use vr_traits::WebVRMsg;
 
 pub use gleam::gl;
 pub use servo_config as config;

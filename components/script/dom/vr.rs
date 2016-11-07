@@ -7,11 +7,14 @@ use dom::bindings::codegen::Bindings::VRBinding;
 use dom::bindings::codegen::Bindings::VRBinding::VRMethods;
 use dom::bindings::error::Error;
 use dom::bindings::js::{JS, Root};
+use dom::bindings::inheritance::Castable;
 use dom::bindings::reflector::{Reflectable, reflect_dom_object};
+use dom::event::Event;
 use dom::eventtarget::EventTarget;
 use dom::promise::Promise;
 use dom::globalscope::GlobalScope;
 use dom::vrdisplay::VRDisplay;
+use dom::vrdisplayevent::VRDisplayEvent;
 use ipc_channel::ipc;
 use ipc_channel::ipc::IpcSender;
 use std::rc::Rc;
@@ -34,9 +37,17 @@ impl VR {
     }
 
     pub fn new(global: &GlobalScope) -> Root<VR> {
-        reflect_dom_object(box VR::new_inherited(),
+        let root = reflect_dom_object(box VR::new_inherited(),
                            global,
-                           VRBinding::Wrap)
+                           VRBinding::Wrap);
+        root.register();
+        root
+    }
+} 
+
+impl Drop for VR {
+    fn drop(&mut self) {
+        self.unregister();
     }
 }
 
@@ -101,6 +112,20 @@ impl VR {
                      .map(|d| Root::from_ref(&**d))
     }
 
+    fn register(&self) {
+        if let Some(wevbr_sender) = self.webvr_thread() {
+             let msg = WebVRMsg::RegisterContext(self.global().pipeline_id());
+             wevbr_sender.send(msg).unwrap();
+        }
+    }
+
+    fn unregister(&self) {
+        if let Some(wevbr_sender) = self.webvr_thread() {
+             let msg = WebVRMsg::UnregisterContext(self.global().pipeline_id());
+             wevbr_sender.send(msg).unwrap();
+        }
+    }
+
     fn sync_display(&self, display: &webvr::VRDisplayData) {
         if let Some(existing) = self.find_display(display.display_id) {
             existing.update_display(&display);
@@ -111,6 +136,40 @@ impl VR {
     }
 
     pub fn handle_webvr_event(&self, event: WebVREventMsg) {
-        
+        let event = match event {
+            WebVREventMsg::DisplayEvent(display_event) => display_event
+        };
+
+        match &event {
+            &webvr::VRDisplayEvent::Connect(ref display) => {
+                self.sync_display(&display);
+                if let Some(display) = self.find_display(display.display_id) {
+                    display.handle_webvr_event(&event);
+                    self.notify_event(&display, &event);
+                }
+            },
+            &webvr::VRDisplayEvent::Disconnect(id) => {
+                if let Some(display) = self.find_display(id) {
+                    display.handle_webvr_event(&event);
+                    self.notify_event(&display, &event);
+                }
+            },
+            &webvr::VRDisplayEvent::Activate(ref display, _) |
+            &webvr::VRDisplayEvent::Deactivate(ref display, _) |
+            &webvr::VRDisplayEvent::Blur(ref display) |
+            &webvr::VRDisplayEvent::Focus(ref display) |
+            &webvr::VRDisplayEvent::PresentChange(ref display, _) |
+            &webvr::VRDisplayEvent::Change(ref display) => {
+                self.sync_display(&display);
+                if let Some(display) = self.find_display(display.display_id) {
+                    display.handle_webvr_event(&event);
+                }
+            }
+        };
+    }
+
+    fn notify_event(&self, display: &Root<VRDisplay>, event: &webvr::VRDisplayEvent) {
+        let event = VRDisplayEvent::new_from_webvr(&self.global(), &display, &event);
+        event.upcast::<Event>().fire(display.upcast());
     }
 }

@@ -55,25 +55,25 @@ impl VRDisplayEvent {
 
     pub fn new_from_webvr(global: &GlobalScope,
                           display: &Root<VRDisplay>,
-                          event: webvr::VRDisplayEvent) 
+                          event: &webvr::VRDisplayEvent) 
                           -> Root<VRDisplayEvent> {
         let (name, reason) = match event {
-            webvr::VRDisplayEvent::Connect(_) => ("onvrdisplayconnect", None),
-            webvr::VRDisplayEvent::Disconnect(_) => ("onvrdisplaydisconnect", None),
-            webvr::VRDisplayEvent::Activate(_, reason) => ("onvrdisplayactivate", Some(reason)),
-            webvr::VRDisplayEvent::Deactivate(_, reason) => ("onvrdisplaydeactivate", Some(reason)),
-            webvr::VRDisplayEvent::Blur(_) => ("onvrdisplayblur", None),
-            webvr::VRDisplayEvent::Focus(_) => ("onvrdisplayfocus", None),
-            webvr::VRDisplayEvent::PresentChange(_) => ("onvrdisplaypresentchange", None),
-            webvr::VRDisplayEvent::Change(_) => panic!("VRDisplayEvent:Change event not available in WebVR")
+            &webvr::VRDisplayEvent::Connect(_) => ("displayconnect", None),
+            &webvr::VRDisplayEvent::Disconnect(_) => ("displaydisconnect", None),
+            &webvr::VRDisplayEvent::Activate(_, ref reason) => ("activate", Some(reason)),
+            &webvr::VRDisplayEvent::Deactivate(_, ref reason) => ("deactivate", Some(reason)),
+            &webvr::VRDisplayEvent::Blur(_) => ("blur", None),
+            &webvr::VRDisplayEvent::Focus(_) => ("focus", None),
+            &webvr::VRDisplayEvent::PresentChange(_, _) => ("presentchange", None),
+            &webvr::VRDisplayEvent::Change(_) => panic!("VRDisplayEvent:Change event not available in WebVR")
         };
 
         // map to JS enum values
         let reason = reason.map(|r| {
             match r {
-                webvr::VRDisplayEventReason::Navigation => VRDisplayEventReason::Navigation,
-                webvr::VRDisplayEventReason::Mounted => VRDisplayEventReason::Mounted,
-                webvr::VRDisplayEventReason::Unmounted => VRDisplayEventReason::Unmounted,
+                &webvr::VRDisplayEventReason::Navigation => VRDisplayEventReason::Navigation,
+                &webvr::VRDisplayEventReason::Mounted => VRDisplayEventReason::Mounted,
+                &webvr::VRDisplayEventReason::Unmounted => VRDisplayEventReason::Unmounted,
             }
         });
 
