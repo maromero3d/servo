@@ -100,7 +100,6 @@ use util::opts;
 use util::prefs::PREFS;
 use util::resource_files::resources_dir_path;
 use vr::WebVRThread;
-use vr_traits::WebVRMsg;
 
 pub use gleam::gl;
 
