@@ -9,14 +9,17 @@ use dom::bindings::codegen::Bindings::VRDisplayBinding::VRDisplayMethods;
 use dom::bindings::codegen::Bindings::VRDisplayBinding::VREye;
 use dom::bindings::codegen::Bindings::VRLayerBinding::VRLayer;
 use dom::bindings::codegen::Bindings::WindowBinding::FrameRequestCallback;
+use dom::bindings::inheritance::Castable;
 use dom::bindings::js::{JS, MutNullableHeap, MutHeap, Root};
 use dom::bindings::num::Finite;
 use dom::bindings::reflector::{Reflectable, reflect_dom_object};
 use dom::bindings::str::DOMString;
+use dom::event::Event;
 use dom::eventtarget::EventTarget;
 use dom::globalscope::GlobalScope;
 use dom::promise::Promise;
 use dom::vrdisplaycapabilities::VRDisplayCapabilities;
+use dom::vrdisplayevent::VRDisplayEvent;
 use dom::vrstageparameters::VRStageParameters;
 use dom::vreyeparameters::VREyeParameters;
 use dom::vrframedata::VRFrameData;
@@ -35,7 +38,7 @@ pub struct VRDisplay {
     display: DOMRefCell<WebVRDisplayData>,
     depth_near: Cell<f64>,
     depth_far: Cell<f64>,
-    connected: Cell<bool>,
+    presenting: Cell<bool>,
     left_eye_params: MutHeap<JS<VREyeParameters>>,
     right_eye_params: MutHeap<JS<VREyeParameters>>,
     capabilities: MutHeap<JS<VRDisplayCapabilities>>,
@@ -67,7 +70,7 @@ impl VRDisplay {
             display: DOMRefCell::new(WebVRDisplayData(display.clone())),
             depth_near: Cell::new(0.01),
             depth_far: Cell::new(10000.0),
-            connected: Cell::new(false),
+            presenting: Cell::new(false),
             left_eye_params: MutHeap::new(&*VREyeParameters::new(&display.left_eye_parameters, &global)),
             right_eye_params: MutHeap::new(&*VREyeParameters::new(&display.right_eye_parameters, &global)),
             capabilities: MutHeap::new(&*VRDisplayCapabilities::new(&display.capabilities, &global)),
@@ -92,11 +95,11 @@ impl Drop for VRDisplay {
 impl VRDisplayMethods for VRDisplay {
 
     fn IsConnected(&self) -> bool {
-        self.connected.get()
+        self.display.borrow().0.connected
     }
 
     fn IsPresenting(&self) -> bool {
-        false
+        self.presenting.get()
     }
 
     fn Capabilities(&self) -> Root<VRDisplayCapabilities> {
@@ -126,7 +129,8 @@ impl VRDisplayMethods for VRDisplay {
         //TODO: sync with compositor
         if let Some(wevbr_sender) = self.webvr_thread() {
             let (sender, receiver) = ipc::channel().unwrap();
-            wevbr_sender.send(WebVRMsg::GetFrameData(self.get_display_id(),
+            wevbr_sender.send(WebVRMsg::GetFrameData(self.global().pipeline_id(),
+                                                     self.get_display_id(),
                                                      self.depth_near.get(),
                                                      self.depth_far.get(),
                                                      sender)).unwrap();
@@ -150,7 +154,9 @@ impl VRDisplayMethods for VRDisplay {
 
     fn ResetPose(&self) -> () {
         if let Some(wevbr_sender) = self.webvr_thread() {
-            wevbr_sender.send(WebVRMsg::ResetPose(self.get_display_id(), None)).unwrap();
+            wevbr_sender.send(WebVRMsg::ResetPose(self.global().pipeline_id(),
+                                                  self.get_display_id(), 
+                                                  None)).unwrap();
         }
     }
 
@@ -205,5 +211,39 @@ impl VRDisplay {
 
     pub fn update_display(&self, display: &webvr::VRDisplayData) {
         self.display.borrow_mut().0 = display.clone()
+    }
+
+    pub fn handle_webvr_event(&self, event: &webvr::VRDisplayEvent) {
+        match *event {
+            webvr::VRDisplayEvent::Connect(ref display) => {
+                self.update_display(&display);
+            },
+            webvr::VRDisplayEvent::Disconnect(_id) => {
+                self.display.borrow_mut().0.connected = false;
+            },
+            webvr::VRDisplayEvent::Activate(ref display, _) |
+            webvr::VRDisplayEvent::Deactivate(ref display, _) |
+            webvr::VRDisplayEvent::Blur(ref display) |
+            webvr::VRDisplayEvent::Focus(ref display) => {
+                self.update_display(&display);
+                self.notify_event(&event);
+            },
+            webvr::VRDisplayEvent::PresentChange(ref display, presenting) => {
+                self.update_display(&display);
+                self.presenting.set(presenting);
+                self.notify_event(&event);
+            },
+            webvr::VRDisplayEvent::Change(ref display) => {
+                // Change event doesn't exist in WebVR spec.
+                // So we update diplsay data but don't notify to JS.
+                self.update_display(&display);
+            }
+        };
+    }
+
+    fn notify_event(&self, event: &webvr::VRDisplayEvent) {
+        let root = Root::from_ref(&*self);
+        let event = VRDisplayEvent::new_from_webvr(&self.global(), &root, &event);
+        event.upcast::<Event>().fire(self.upcast());
     }
 }
