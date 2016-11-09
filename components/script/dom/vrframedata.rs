@@ -7,7 +7,7 @@ use dom::bindings::codegen::Bindings::VRFrameDataBinding;
 use dom::bindings::codegen::Bindings::VRFrameDataBinding::VRFrameDataMethods;
 use dom::bindings::conversions::{slice_to_array_buffer_view, update_array_buffer_view};
 use dom::bindings::error::Fallible;
-use dom::bindings::js::Root;
+use dom::bindings::js::{JS, Root};
 use dom::bindings::num::Finite;
 use dom::bindings::reflector::{Reflectable, Reflector, reflect_dom_object};
 use dom::globalscope::GlobalScope;
@@ -24,19 +24,20 @@ pub struct VRFrameData {
     left_view: Heap<*mut JSObject>,
     right_proj: Heap<*mut JSObject>,
     right_view: Heap<*mut JSObject>,
-    pose: Root<VRPose>,
+    pose: JS<VRPose>,
     timestamp: Cell<u64>
 }
 
 impl VRFrameData {
 
     #[allow(unrooted_must_root)]
-    fn new_inherited(global: &GlobalScope) -> VRFrameData {
+    fn new(global: &GlobalScope) -> Root<VRFrameData> {
 
         let matrix = [1.0, 0.0, 0.0, 0.0,
                       0.0, 1.0, 0.0, 0.0,
                       0.0, 0.0, 1.0, 0.0,
                       0.0, 0.0, 0.0, 1.0f32];
+        let pose = VRPose::new(&global, &Default::default());
 
         let mut framedata = VRFrameData {
             reflector_: Reflector::new(),
@@ -44,7 +45,7 @@ impl VRFrameData {
             left_view: Heap::default(),
             right_proj: Heap::default(),
             right_view: Heap::default(),
-            pose: VRPose::new(&global, &Default::default()),
+            pose: JS::from_ref(&*pose),
             timestamp: Cell::new(time::get_time().sec as u64)
         };
 
@@ -53,13 +54,9 @@ impl VRFrameData {
         framedata.right_proj.set(slice_to_array_buffer_view(global.get_cx(), &matrix));
         framedata.right_view.set(slice_to_array_buffer_view(global.get_cx(), &matrix));
 
-        framedata
-    }
-
-    pub fn new(global: &GlobalScope) -> Root<VRFrameData> {
-        reflect_dom_object(box VRFrameData::new_inherited(global),
-                           global,
-                           VRFrameDataBinding::Wrap)
+        reflect_dom_object(box framedata,
+                    global,
+                    VRFrameDataBinding::Wrap)
     }
 
     pub fn Constructor(global: &GlobalScope) -> Fallible<Root<VRFrameData>> {
