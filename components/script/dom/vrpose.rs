@@ -11,38 +11,53 @@ use dom::bindings::js::Root;
 use dom::bindings::reflector::{Reflector, reflect_dom_object};
 use dom::globalscope::GlobalScope;
 use js::jsapi::{Heap, JSContext, JSObject};
+use std::ptr;
 use vr_traits::webvr;
 
 #[dom_struct]
 pub struct VRPose {
     reflector_: Reflector,
-    position: DOMRefCell<Option<Heap<*mut JSObject>>>,
-    orientation: DOMRefCell<Option<Heap<*mut JSObject>>>,
-    linear_vel: DOMRefCell<Option<Heap<*mut JSObject>>>,
-    angular_vel: DOMRefCell<Option<Heap<*mut JSObject>>>,
-    linear_acc: DOMRefCell<Option<Heap<*mut JSObject>>>,
-    angular_acc: DOMRefCell<Option<Heap<*mut JSObject>>>
+    position: DOMRefCell<Heap<*mut JSObject>>,
+    orientation: DOMRefCell<Heap<*mut JSObject>>,
+    linear_vel: DOMRefCell<Heap<*mut JSObject>>,
+    angular_vel: DOMRefCell<Heap<*mut JSObject>>,
+    linear_acc: DOMRefCell<Heap<*mut JSObject>>,
+    angular_acc: DOMRefCell<Heap<*mut JSObject>>
 }
 
 #[allow(unsafe_code)]
 fn update_typed_array(cx: *mut JSContext, 
                       src: Option<&[f32]>, 
-                      dst: &DOMRefCell<Option<Heap<*mut JSObject>>>) {
-
+                      dst: &DOMRefCell<Heap<*mut JSObject>>) {
+    let mut dst = dst.borrow_mut();
     match src {
-        Some(data) => {
-            if let Some(ref heap) = *dst.borrow() {
-                unsafe { 
-                    update_array_buffer_view(heap.get(), data)
+        Some(ref data) => {
+            if dst.get().is_null() {
+                dst.set(slice_to_array_buffer_view(cx, &data));
+            } else {
+                unsafe {
+                    update_array_buffer_view(dst.get(), &data);
                 }
-                return;
-            } 
-            let mut heap = Heap::default();
-            heap.set(slice_to_array_buffer_view(cx, data));
-            *dst.borrow_mut() = Some(heap);
-            
+            }
         },
-        None => *dst.borrow_mut() = None
+        None => {
+            if !dst.get().is_null() {
+                dst.set(ptr::null_mut());
+            }
+        }
+    }
+}
+
+#[inline]
+#[allow(unsafe_code)]
+fn heap_to_option(heap: &DOMRefCell<Heap<*mut JSObject>>) -> Option<NonZero<*mut JSObject>> {
+    let js_object = heap.borrow_mut().get();
+    if js_object.is_null() {
+        None
+    } else {
+        unsafe {
+            Some(NonZero::new(js_object))
+        }
     }
 }
 
@@ -52,12 +67,12 @@ impl VRPose {
     fn new_inherited(global: &GlobalScope, pose: &webvr::VRPose) -> VRPose {
         let result = VRPose {
             reflector_: Reflector::new(),
-            position: DOMRefCell::new(None),
-            orientation: DOMRefCell::new(None),
-            linear_vel: DOMRefCell::new(None),
-            angular_vel: DOMRefCell::new(None),
-            linear_acc: DOMRefCell::new(None),
-            angular_acc: DOMRefCell::new(None)
+            position: DOMRefCell::new(Heap::default()),
+            orientation: DOMRefCell::new(Heap::default()),
+            linear_vel: DOMRefCell::new(Heap::default()),
+            angular_vel: DOMRefCell::new(Heap::default()),
+            linear_acc: DOMRefCell::new(Heap::default()),
+            angular_acc: DOMRefCell::new(Heap::default())
         };
         result.update(&global, &pose);
         result
@@ -83,43 +98,31 @@ impl VRPose {
 impl VRPoseMethods for VRPose {
     #[allow(unsafe_code)]
     fn GetPosition(&self, _cx: *mut JSContext) -> Option<NonZero<*mut JSObject>> {
-        self.position.borrow().as_ref().map(|v| {
-            unsafe { NonZero::new(v.get()) }
-        })
+        heap_to_option(&self.position)
     }
 
     #[allow(unsafe_code)]
     fn GetLinearVelocity(&self, _cx: *mut JSContext) -> Option<NonZero<*mut JSObject>> {
-        self.linear_vel.borrow().as_ref().map(|v| {
-            unsafe { NonZero::new(v.get()) }
-        })
+        heap_to_option(&self.linear_vel)
     }
 
     #[allow(unsafe_code)]
     fn GetLinearAcceleration(&self, _cx: *mut JSContext) -> Option<NonZero<*mut JSObject>> {
-        self.linear_acc.borrow().as_ref().map(|v| {
-            unsafe { NonZero::new(v.get()) }
-        })
+        heap_to_option(&self.linear_vel)
     }
 
     #[allow(unsafe_code)]
     fn GetOrientation(&self, _cx: *mut JSContext) -> Option<NonZero<*mut JSObject>> {
-        self.orientation.borrow().as_ref().map(|v| {
-            unsafe { NonZero::new(v.get()) }
-        })
+        heap_to_option(&self.orientation)
     }
 
     #[allow(unsafe_code)]
     fn GetAngularVelocity(&self, _cx: *mut JSContext) -> Option<NonZero<*mut JSObject>> {
-        self.angular_vel.borrow().as_ref().map(|v| {
-            unsafe { NonZero::new(v.get()) }
-        })
+        heap_to_option(&self.angular_vel)
     }
 
     #[allow(unsafe_code)]
     fn GetAngularAcceleration(&self, _cx: *mut JSContext) -> Option<NonZero<*mut JSObject>> {
-        self.angular_acc.borrow().as_ref().map(|v| {
-            unsafe { NonZero::new(v.get()) }
-        })
+        heap_to_option(&self.angular_acc)
     }
 }
