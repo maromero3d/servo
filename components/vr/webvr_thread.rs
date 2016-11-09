@@ -52,7 +52,6 @@ impl WebVRThread {
             match msg {
                 WebVRMsg::RegisterContext(context) => {
                     self.handle_register_context(context);
-                    // start scheduling poll_events call
                     self.schedule_poll_events();
                 },
                 WebVRMsg::UnregisterContext(context) => {
@@ -63,6 +62,7 @@ impl WebVRThread {
                 },
                 WebVRMsg::GetVRDisplays(sender) => {
                     self.handle_get_displays(sender);
+                    self.schedule_poll_events();
                 },
                 WebVRMsg::GetFrameData(pipeline_id, device_id, near, far, sender) => {
                     self.handle_framedata(pipeline_id, device_id, near, far, sender);
@@ -196,19 +196,21 @@ impl WebVRThread {
     }
 
     fn schedule_poll_events(&mut self) {
-        if !self.polling_events {
+        if self.service.is_initialized() && !self.polling_events {
             self.polling_events = true;
             let webvr_thread = self.sender.clone();
             let (sender, receiver) = ipc::channel().unwrap();
             spawn_named("WebVRPollEvents".into(), move || {
-                if webvr_thread.send(WebVRMsg::PollEvents(sender)).is_err() {
-                    return;
+                loop {
+                    if webvr_thread.send(WebVRMsg::PollEvents(sender.clone())).is_err() {
+                        break;
+                    }
+                    if receiver.recv().unwrap() == false {
+                        // WebVR Thread asked to unschedule this thread
+                        break; 
+                    }
+                    thread::sleep(time::Duration::from_millis(500));
                 }
-                if receiver.recv().unwrap() == false {
-                    // WebVR Thread asked to unschedule this thread
-                    return; 
-                }
-                thread::sleep(time::Duration::from_millis(500));
             });
         }
     }
