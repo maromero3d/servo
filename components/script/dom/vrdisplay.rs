@@ -24,6 +24,8 @@ use dom::vrstageparameters::VRStageParameters;
 use dom::vreyeparameters::VREyeParameters;
 use dom::vrframedata::VRFrameData;
 use dom::vrpose::VRPose;
+use dom::webglrenderingcontext::WebGLRenderingContext;
+use js::jsapi::JSContext;
 use ipc_channel::ipc;
 use ipc_channel::ipc::IpcSender;
 use std::cell::Cell;
@@ -44,7 +46,10 @@ pub struct VRDisplay {
     capabilities: MutHeap<JS<VRDisplayCapabilities>>,
     stage_params: MutNullableHeap<JS<VRStageParameters>>,
     #[ignore_heap_size_of = "Defined in rust-webvr"]
-    frame_data: DOMRefCell<WebVRFrameData> 
+    frame_data: DOMRefCell<WebVRFrameData>,
+    #[ignore_heap_size_of = "Defined in rust-webvr"]
+    layer: DOMRefCell<WebVRLayer>,
+    layer_ctx: MutNullableHeap<JS<WebGLRenderingContext>>,
 }
 
 // Wrappers to include WebVR structs in a DOM struct
@@ -55,6 +60,10 @@ no_jsmanaged_fields!(WebVRDisplayData);
 #[derive(Clone, Default)]
 pub struct WebVRFrameData(webvr::VRFrameData);
 no_jsmanaged_fields!(WebVRFrameData);
+
+#[derive(Clone, Default)]
+pub struct WebVRLayer(webvr::VRLayer);
+no_jsmanaged_fields!(WebVRLayer);
 
 impl VRDisplay {
 
@@ -75,7 +84,9 @@ impl VRDisplay {
             right_eye_params: MutHeap::new(&*VREyeParameters::new(&display.right_eye_parameters, &global)),
             capabilities: MutHeap::new(&*VRDisplayCapabilities::new(&display.capabilities, &global)),
             stage_params: MutNullableHeap::new(stage.as_ref().map(|v| v.deref())),
-            frame_data: DOMRefCell::new(Default::default())
+            frame_data: DOMRefCell::new(Default::default()),
+            layer: DOMRefCell::new(Default::default()),
+            layer_ctx: MutNullableHeap::default()
         }
     }
 
@@ -185,13 +196,104 @@ impl VRDisplayMethods for VRDisplay {
     }
 
     #[allow(unrooted_must_root)]
-    fn RequestPresent(&self, _layers: Vec<VRLayer>) -> Rc<Promise> {
-        unimplemented!()
+    fn RequestPresent(&self, layers: Vec<VRLayer>) -> Rc<Promise> {
+        let promise = Promise::new(&self.global());
+        // TODO: WebVR spec: this method must be called in response to a user gesture
+
+        // WebVR spec: If canPresent is false the promise MUST be rejected
+        if !self.display.borrow().0.capabilities.can_present {
+            let msg = "VRDisplay canPresent is false".to_string();
+            promise.reject_native(promise.global().get_cx(), &msg);
+            return promise;
+        }
+
+        // Current WebVRSpec only allows 1 VRLayer if the VRDevice can present.
+        // Future revisions of this spec may allow multiple layers to enable more complex rendering effects 
+        // such as compositing WebGL and DOM elements together. 
+        // That functionality is not allowed by this revision of the spec.
+        if layers.len() != 1 {
+            let msg = "The number of layers must be 1".to_string();
+            promise.reject_native(promise.global().get_cx(), &msg);
+            return promise;
+        }
+
+        // Parse and validate received VRLayer
+        let layer = validate_layer(self.global().get_cx(), &layers[0]);
+
+        if let Err(msg) = layer {
+            let msg = msg.to_string();
+            promise.reject_native(promise.global().get_cx(), &msg);
+            return promise;
+        }
+
+        let (layer_bounds, layer_ctx) = layer.unwrap();
+
+        // WebVR spec: Repeat calls while already presenting will update the VRLayers being displayed.
+        if self.presenting.get() {
+            self.layer.borrow_mut().0 = layer_bounds;
+            self.layer_ctx.set(JS::from_ref(*&layer_ctx));
+            promise.resolve_native(promise.global().get_cx(), &());
+            return promise;
+        }
+        
+        // Request Present
+        if let Some(wevbr_sender) = self.webvr_thread() {
+            let (sender, receiver) = ipc::channel().unwrap();
+            wevbr_sender.send(WebVRMsg::RequestPresent(self.global().pipeline_id(),
+                                                       self.display.borrow().0.display_id,
+                                                       sender))
+                                                       .unwrap();
+            match receiver.recv().unwrap() {
+                Ok(_) => {
+                    self.layer.borrow_mut().0 = layer_bounds;
+                    self.layer_ctx.set(JS::from_ref(*&layer_ctx));
+                    self.init_present();
+                },
+                Err(e) => {
+                    promise.reject_native(promise.global().get_cx(), &e);
+                }
+            }
+        } else {
+            let msg = "Not available".to_string();
+            promise.reject_native(promise.global().get_cx(), &msg);
+        }
+
+        promise
     }
 
     #[allow(unrooted_must_root)]
     fn ExitPresent(&self) -> Rc<Promise> {
-        unimplemented!()
+        let promise = Promise::new(&self.global());
+
+        // WebVR spec: If the VRDisplay is not presenting the promise MUST be rejected.
+        if !self.presenting.get() {
+            let msg = "VRDisplay is not presenting".to_string();
+            promise.reject_native(promise.global().get_cx(), &msg);
+            return promise;
+        }
+
+        // Exit present
+        if let Some(wevbr_sender) = self.webvr_thread() {
+            let (sender, receiver) = ipc::channel().unwrap();
+            wevbr_sender.send(WebVRMsg::ExitPresent(self.global().pipeline_id(),
+                                                    self.display.borrow().0.display_id,
+                                                    sender))
+                                                    .unwrap();
+            match receiver.recv().unwrap() {
+                Ok(()) => {
+                    self.stop_present();
+                    promise.resolve_native(promise.global().get_cx(), &());
+                },
+                Err(e) => {
+                    promise.reject_native(promise.global().get_cx(), &e);
+                }
+            }
+        } else {
+            let msg = "Not available".to_string();
+            promise.reject_native(promise.global().get_cx(), &msg);
+        }
+
+        promise
     }
 
     fn SubmitFrame(&self) -> () {
@@ -235,7 +337,7 @@ impl VRDisplay {
             },
             webvr::VRDisplayEvent::Change(ref display) => {
                 // Change event doesn't exist in WebVR spec.
-                // So we update diplsay data but don't notify to JS.
+                // So we update display data but don't notify JS.
                 self.update_display(&display);
             }
         };
@@ -245,5 +347,46 @@ impl VRDisplay {
         let root = Root::from_ref(&*self);
         let event = VRDisplayEvent::new_from_webvr(&self.global(), &root, &event);
         event.upcast::<Event>().fire(self.upcast());
+    }
+
+    fn init_present(&self) {
+        self.presenting.set(true);
+    }
+
+    fn stop_present(&self) {
+        self.presenting.set(false);
+    }
+}
+
+
+// WebVR Spect: If the number of values in the leftBounds/rightBounds arrays 
+// is not 0 or 4 for any of the passed layers the promise is rejected
+fn parse_bounds(src: &Option<Vec<Finite<f32>>>, dst: &mut [f32; 4]) -> Result<(), &'static str> {
+    match *src {
+        Some(ref values) => {
+            if values.len() == 0 {
+                return Ok(())
+            } 
+            if values.len() > 4 {
+                return Err("The number of values in the leftBounds/rightBounds arrays must be 0 or 4")
+            }
+            for i in 0..4 {
+                dst[i] = *values[i].deref();
+            }
+            Ok(())
+        },
+        None => Ok(())
+    }
+}
+
+fn validate_layer(cx: *mut JSContext, layer: &VRLayer) -> Result<(WebVRLayer, Root<WebGLRenderingContext>), &'static str> {
+    let ctx = layer.source.as_ref().map(|ref s| s.get_or_init_webgl_context(cx, None)).unwrap_or(None);
+    if let Some(ctx) = ctx {
+        let mut data = webvr::VRLayer::default();
+        try!(parse_bounds(&layer.leftBounds, &mut data.left_bounds));
+        try!(parse_bounds(&layer.rightBounds, &mut data.right_bounds));
+        Ok((WebVRLayer(data), ctx))
+    } else {
+        Err("VRLayer source must be a WebGL Context")
     }
 }
