@@ -5,11 +5,10 @@
 // https://w3c.github.io/webvr/#interface-vrlayer
 
 //typedef (HTMLCanvasElement or OffscreenCanvas) VRSource;
-typedef (HTMLCanvasElement or CanvasRenderingContext2D) VRSource;
 
 dictionary VRLayer {
-  VRSource? source;
+  HTMLCanvasElement source;
   
-  sequence<float>? leftBounds;
-  sequence<float>? rightBounds;
+  sequence<float> leftBounds;
+  sequence<float> rightBounds;
 };
