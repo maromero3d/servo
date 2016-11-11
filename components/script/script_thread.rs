@@ -2189,9 +2189,8 @@ impl ScriptThread {
     }
 
     fn handle_webvr_event(&self, pipeline_id: PipelineId, event: WebVREventMsg) {
-        if let Some(context) = self.find_child_context(pipeline_id) {
-            let win = context.active_window();
-            let navigator = win.Navigator();
+        if let Some(window) = self.documents.borrow().find_window(pipeline_id) {
+            let navigator = window.Navigator();
             navigator.handle_webvr_event(event);
         }
     }

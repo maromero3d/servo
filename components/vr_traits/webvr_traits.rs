@@ -13,7 +13,7 @@ pub enum WebVRMsg {
     GetVRDisplays(IpcSender<WebVRResult<Vec<VRDisplayData>>>),
     GetFrameData(PipelineId, u64, f64, f64, IpcSender<WebVRResult<VRFrameData>>),
     ResetPose(PipelineId, u64, Option<IpcSender<WebVRResult<()>>>),
-    RequestPresent(PipelineId, u64, IpcSender<WebVRResult<()>>),
+    RequestPresent(PipelineId, u64, IpcSender<WebVRResult<VRDeviceCompositor>>),
     ExitPresent(PipelineId, u64, IpcSender<WebVRResult<()>>),
     Exit,
 }
