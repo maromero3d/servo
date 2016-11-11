@@ -6,6 +6,7 @@ use util::thread::spawn_named;
 use std::collections::{HashMap, HashSet};
 use msg::constellation_msg::PipelineId;
 use script_traits::{ConstellationMsg, WebVREventMsg};
+use std::ops::DerefMut;
 use std::sync::mpsc::Sender;
 use std::{thread, time};
 
@@ -143,12 +144,13 @@ impl WebVRThread {
     fn handle_request_present(&mut self,
                          pipeline: PipelineId,
                          device_id: u64,
-                         sender: IpcSender<WebVRResult<()>>) {
+                         sender: IpcSender<WebVRResult<VRDeviceCompositor>>) {
         match self.access_check(pipeline, device_id).map(|d| d.clone()) {
             Ok(device) => {
                 self.presenting.insert(device_id, pipeline);
-                sender.send(Ok(())).unwrap();
                 let data = device.borrow().get_display_data();
+                let compositor = VRDeviceCompositor::new(device.borrow_mut().deref_mut());
+                sender.send(Ok(compositor)).unwrap();
                 self.notify_event(VRDisplayEvent::PresentChange(data, true));
             },
             Err(msg) => {
