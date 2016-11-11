@@ -50,6 +50,8 @@ pub struct VRDisplay {
     #[ignore_heap_size_of = "Defined in rust-webvr"]
     layer: DOMRefCell<WebVRLayer>,
     layer_ctx: MutNullableHeap<JS<WebGLRenderingContext>>,
+    #[ignore_heap_size_of = "Defined in rust-webvr"]
+    compositor: DOMRefCell<Option<WebVRCompositor>>
 }
 
 // Wrappers to include WebVR structs in a DOM struct
@@ -64,6 +66,10 @@ no_jsmanaged_fields!(WebVRFrameData);
 #[derive(Clone, Default)]
 pub struct WebVRLayer(webvr::VRLayer);
 no_jsmanaged_fields!(WebVRLayer);
+
+#[derive(Clone)]
+pub struct WebVRCompositor(webvr::VRDeviceCompositor);
+no_jsmanaged_fields!(WebVRCompositor);
 
 impl VRDisplay {
 
@@ -86,7 +92,8 @@ impl VRDisplay {
             stage_params: MutNullableHeap::new(stage.as_ref().map(|v| v.deref())),
             frame_data: DOMRefCell::new(Default::default()),
             layer: DOMRefCell::new(Default::default()),
-            layer_ctx: MutNullableHeap::default()
+            layer_ctx: MutNullableHeap::default(),
+            compositor: DOMRefCell::new(None)
         }
     }
 
@@ -230,8 +237,8 @@ impl VRDisplayMethods for VRDisplay {
 
         // WebVR spec: Repeat calls while already presenting will update the VRLayers being displayed.
         if self.presenting.get() {
-            self.layer.borrow_mut().0 = layer_bounds;
-            self.layer_ctx.set(JS::from_ref(*&layer_ctx));
+            *self.layer.borrow_mut() = layer_bounds;
+            self.layer_ctx.set(Some(&layer_ctx));
             promise.resolve_native(promise.global().get_cx(), &());
             return promise;
         }
@@ -244,10 +251,10 @@ impl VRDisplayMethods for VRDisplay {
                                                        sender))
                                                        .unwrap();
             match receiver.recv().unwrap() {
-                Ok(_) => {
-                    self.layer.borrow_mut().0 = layer_bounds;
-                    self.layer_ctx.set(JS::from_ref(*&layer_ctx));
-                    self.init_present();
+                Ok(compositor) => {
+                    *self.layer.borrow_mut() = layer_bounds;
+                    self.layer_ctx.set(Some(&layer_ctx));
+                    self.init_present(&compositor);
                 },
                 Err(e) => {
                     promise.reject_native(promise.global().get_cx(), &e);
@@ -349,17 +356,19 @@ impl VRDisplay {
         event.upcast::<Event>().fire(self.upcast());
     }
 
-    fn init_present(&self) {
+    fn init_present(&self, compositor: &webvr::VRDeviceCompositor) {
         self.presenting.set(true);
+        *self.compositor.borrow_mut() = Some(WebVRCompositor(*compositor));
     }
 
     fn stop_present(&self) {
         self.presenting.set(false);
+        *self.compositor.borrow_mut() = None;
     }
 }
 
 
-// WebVR Spect: If the number of values in the leftBounds/rightBounds arrays 
+// WebVR Spect: If the number of values in the leftBounds/rightBounds arrays
 // is not 0 or 4 for any of the passed layers the promise is rejected
 fn parse_bounds(src: &Option<Vec<Finite<f32>>>, dst: &mut [f32; 4]) -> Result<(), &'static str> {
     match *src {
