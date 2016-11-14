@@ -99,7 +99,7 @@ use std::sync::mpsc::Sender;
 use util::opts;
 use util::prefs::PREFS;
 use util::resource_files::resources_dir_path;
-use vr::WebVRThread;
+use vr::{WebVRThread, WebVRCompositorCreator};
 
 pub use gleam::gl;
 
@@ -202,6 +202,10 @@ impl<Window> Browser<Window> where Window: WindowMethods + 'static {
             if let Some(port) = opts.webdriver_port {
                 webdriver(port, constellation_chan.clone());
             }
+        }
+
+        if cfg!(target_os = "windows") {
+            webrender.set_vr_compositor_creator(WebVRCompositorCreator::new());
         }
 
         // The compositor coordinates with the client window to create the final
