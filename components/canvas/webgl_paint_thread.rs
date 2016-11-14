@@ -144,6 +144,19 @@ impl WebGLPaintThread {
         }
     }
 
+    fn handle_webvr_message(&self, message: webrender_traits::VRCompositorCommand) {
+        debug!("WebGL message: {:?}", message);
+        match self.data {
+            WebGLPaintTaskData::WebRender(ref api, id) => {
+                api.send_vr_compositor_command(id, message);
+            }
+            WebGLPaintTaskData::Readback(ref ctx, _, _) => {
+                error!("Webrender is required for WebVR implementation");
+            }
+        }
+    }
+
+
     /// Creates a new `WebGLPaintThread` and returns an `IpcSender` to
     /// communicate with it.
     pub fn start(size: Size2D<i32>,
@@ -190,6 +203,7 @@ impl WebGLPaintThread {
                         }
                     }
                     CanvasMsg::Canvas2d(_) => panic!("Wrong message sent to WebGLThread"),
+                    CanvasMsg::WebVR(message) => painter.handle_webvr_message(message)
                 }
             }
         }).expect("Thread spawning failed");

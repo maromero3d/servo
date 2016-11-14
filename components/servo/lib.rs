@@ -98,7 +98,7 @@ use std::cmp::max;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::mpsc::Sender;
-use vr::WebVRThread;
+use vr::{WebVRThread, WebVRCompositorCreator};
 
 pub use gleam::gl;
 pub use servo_config as config;
@@ -206,6 +206,10 @@ impl<Window> Browser<Window> where Window: WindowMethods + 'static {
             if let Some(port) = opts.webdriver_port {
                 webdriver(port, constellation_chan.clone());
             }
+        }
+
+        if cfg!(target_os = "windows") {
+            webrender.set_vr_compositor_creator(WebVRCompositorCreator::new());
         }
 
         // The compositor coordinates with the client window to create the final
