@@ -2,17 +2,22 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+use canvas_traits::CanvasMsg;
 use core::ops::Deref;
+use dom::bindings::callback::ExceptionHandling;
 use dom::bindings::cell::DOMRefCell;
+use dom::bindings::codegen::Bindings::PerformanceBinding::PerformanceBinding::PerformanceMethods;
 use dom::bindings::codegen::Bindings::VRDisplayBinding;
 use dom::bindings::codegen::Bindings::VRDisplayBinding::VRDisplayMethods;
 use dom::bindings::codegen::Bindings::VRDisplayBinding::VREye;
 use dom::bindings::codegen::Bindings::VRLayerBinding::VRLayer;
 use dom::bindings::codegen::Bindings::WindowBinding::FrameRequestCallback;
+use dom::bindings::codegen::Bindings::WindowBinding::WindowBinding::WindowMethods;
 use dom::bindings::inheritance::Castable;
 use dom::bindings::js::{JS, MutNullableHeap, MutHeap, Root};
 use dom::bindings::num::Finite;
 use dom::bindings::reflector::{Reflectable, reflect_dom_object};
+use dom::bindings::refcounted::Trusted;
 use dom::bindings::str::DOMString;
 use dom::event::Event;
 use dom::eventtarget::EventTarget;
@@ -28,10 +33,18 @@ use dom::webglrenderingcontext::WebGLRenderingContext;
 use js::jsapi::JSContext;
 use ipc_channel::ipc;
 use ipc_channel::ipc::IpcSender;
+use util::thread::spawn_named;
+use std::boxed::FnBox;
 use std::cell::Cell;
+use std::mem;
 use std::rc::Rc;
+use std::sync::mpsc;
+use script_runtime::CommonScriptMsg;
+use script_runtime::ScriptThreadEventCategory::WebVREvent;
+use script_thread::Runnable;
 use vr_traits::webvr;
 use vr_traits::WebVRMsg;
+use webrender_traits::VRCompositorCommand;
 
 #[dom_struct]
 pub struct VRDisplay {
@@ -51,7 +64,11 @@ pub struct VRDisplay {
     layer: DOMRefCell<WebVRLayer>,
     layer_ctx: MutNullableHeap<JS<WebGLRenderingContext>>,
     #[ignore_heap_size_of = "Defined in rust-webvr"]
-    compositor: DOMRefCell<Option<WebVRCompositor>>
+    compositor_id: DOMRefCell<Option<WebVRDeviceType>>,
+    next_raf_id: Cell<u32>,
+    /// List of request animation frame callbacks
+    #[ignore_heap_size_of = "closures are hard"]
+    raf_callback_list: DOMRefCell<Vec<(u32, Option<Box<FnBox(f64)>>)>>,
 }
 
 // Wrappers to include WebVR structs in a DOM struct
@@ -68,8 +85,9 @@ pub struct WebVRLayer(webvr::VRLayer);
 no_jsmanaged_fields!(WebVRLayer);
 
 #[derive(Clone)]
-pub struct WebVRCompositor(webvr::VRDeviceCompositor);
-no_jsmanaged_fields!(WebVRCompositor);
+pub struct WebVRDeviceType(webvr::VRDeviceType);
+no_jsmanaged_fields!(WebVRDeviceType);
+
 
 impl VRDisplay {
 
@@ -93,7 +111,9 @@ impl VRDisplay {
             frame_data: DOMRefCell::new(Default::default()),
             layer: DOMRefCell::new(Default::default()),
             layer_ctx: MutNullableHeap::default(),
-            compositor: DOMRefCell::new(None)
+            compositor_id: DOMRefCell::new(None),
+            next_raf_id: Cell::new(1),
+            raf_callback_list: DOMRefCell::new(vec![])
         }
     }
 
@@ -194,12 +214,29 @@ impl VRDisplayMethods for VRDisplay {
         self.depth_far.set(*value.deref());
     }
 
-    fn RequestAnimationFrame(&self, _callback: Rc<FrameRequestCallback>) -> i32 {
-        unimplemented!()
+    fn RequestAnimationFrame(&self, callback: Rc<FrameRequestCallback>) -> u32 {
+        if self.presenting.get() {
+            let raf_id = self.next_raf_id.get();
+            self.next_raf_id.set(raf_id + 1);
+            let callback = move |now: f64| {
+                let _ = callback.Call__(Finite::wrap(now), ExceptionHandling::Report);
+            };
+            self.raf_callback_list.borrow_mut().push((raf_id, Some(Box::new(callback))));
+            raf_id 
+        } else {
+            self.global().as_window().RequestAnimationFrame(callback)
+        }
     }
 
-    fn CancelAnimationFrame(&self, _handle: i32) -> () {
-        unimplemented!()
+    fn CancelAnimationFrame(&self, handle: u32) -> () {
+        if self.presenting.get() {
+            let mut list = self.raf_callback_list.borrow_mut();
+            if let Some(mut pair) = list.iter_mut().find(|pair| pair.0 == handle) {
+                pair.1 = None;
+            }
+        } else {
+            self.global().as_window().CancelAnimationFrame(handle);
+        }
     }
 
     #[allow(unrooted_must_root)]
@@ -251,10 +288,11 @@ impl VRDisplayMethods for VRDisplay {
                                                        sender))
                                                        .unwrap();
             match receiver.recv().unwrap() {
-                Ok(compositor) => {
+                Ok(compositor_id) => {
                     *self.layer.borrow_mut() = layer_bounds;
                     self.layer_ctx.set(Some(&layer_ctx));
-                    self.init_present(&compositor);
+                    self.init_present(compositor_id);
+                    promise.resolve_native(promise.global().get_cx(), &());
                 },
                 Err(e) => {
                     promise.reject_native(promise.global().get_cx(), &e);
@@ -304,7 +342,16 @@ impl VRDisplayMethods for VRDisplay {
     }
 
     fn SubmitFrame(&self) -> () {
-        unimplemented!()
+        if !self.presenting.get() {
+            warn!("VRDisplay not presenting");
+            return;
+        }
+
+        let api_sender = self.layer_ctx.get().unwrap().ipc_renderer();
+        let compositor_id = self.compositor_id.borrow().as_ref().unwrap().0.as_u32();
+        let layer = self.layer.borrow();
+        let msg = VRCompositorCommand::SubmitFrame(compositor_id, layer.0.left_bounds, layer.0.right_bounds);
+        api_sender.send(CanvasMsg::WebVR(msg)).unwrap();
     }
 }
 
@@ -356,14 +403,73 @@ impl VRDisplay {
         event.upcast::<Event>().fire(self.upcast());
     }
 
-    fn init_present(&self, compositor: &webvr::VRDeviceCompositor) {
+    fn init_present(&self, compositor_id: webvr::VRDeviceType) {
         self.presenting.set(true);
-        *self.compositor.borrow_mut() = Some(WebVRCompositor(*compositor));
+        *self.compositor_id.borrow_mut() = Some(WebVRDeviceType(compositor_id));
+        let compositor_id = compositor_id.as_u32();
+        let api_sender = self.layer_ctx.get().unwrap().ipc_renderer();
+        let js_sender = self.global().script_chan();
+        let address = Trusted::new(&*self);
+
+        spawn_named("WebVR_RAF".into(), move || {
+            let (sync_sender, sync_receiver) = ipc::channel().unwrap();
+            let (raf_sender, raf_receiver) = mpsc::channel();
+            // Initialize compositor
+            api_sender.send(CanvasMsg::WebVR(VRCompositorCommand::Create(compositor_id))).unwrap();
+            loop {
+                // Run Sync Poses on Render thread
+                let msg = VRCompositorCommand::SyncPoses(compositor_id, sync_sender.clone());
+                api_sender.send(CanvasMsg::WebVR(msg)).unwrap();
+                // Wait until Sync Poses ends
+                if sync_receiver.recv().unwrap().is_err() {
+                    // ExitPresent called or some error happened creating the compositor in webrender.
+                    // Stop RAF thread.
+                    return;
+                }
+                // Notify RAF callbacks
+                let msg = box NotifyDisplayRAF {
+                    address: address.clone(),
+                    sender: raf_sender.clone()
+                };
+                js_sender.send(CommonScriptMsg::RunnableMsg(WebVREvent, msg)).unwrap();
+                // Wait until RAF execution ends
+                raf_receiver.recv().unwrap();
+            }
+        });
     }
 
     fn stop_present(&self) {
         self.presenting.set(false);
-        *self.compositor.borrow_mut() = None;
+        let api_sender = self.layer_ctx.get().unwrap().ipc_renderer();
+        let compositor_id = self.compositor_id.borrow().as_ref().unwrap().0.as_u32();
+        let msg = VRCompositorCommand::Release(compositor_id);
+        api_sender.send(CanvasMsg::WebVR(msg)).unwrap();
+    }
+
+    fn notify_raf(&self) {
+        let mut callbacks = mem::replace(&mut *self.raf_callback_list.borrow_mut(), vec![]);
+        let timing = self.global().as_window().Performance().Now();
+
+        for (_, callback) in callbacks.drain(..) {
+            if let Some(callback) = callback {
+                callback(*timing);
+            }
+        }
+    }
+}
+
+struct NotifyDisplayRAF {
+    address: Trusted<VRDisplay>,
+    sender: mpsc::Sender<()>
+}
+
+impl Runnable for NotifyDisplayRAF {
+    fn name(&self) -> &'static str { "NotifyDisplayRAF" }
+
+    fn handler(self: Box<Self>) {
+        let display = self.address.root();
+        display.notify_raf();
+        self.sender.send(()).unwrap();
     }
 }
 

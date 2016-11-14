@@ -6,9 +6,11 @@ use util::thread::spawn_named;
 use std::collections::{HashMap, HashSet};
 use msg::constellation_msg::PipelineId;
 use script_traits::{ConstellationMsg, WebVREventMsg};
+use std::cell::RefCell;
 use std::ops::DerefMut;
 use std::sync::mpsc::Sender;
 use std::{thread, time};
+use webrender_traits;
 
 pub struct WebVRThread {
     receiver: IpcReceiver<WebVRMsg>,
@@ -144,13 +146,12 @@ impl WebVRThread {
     fn handle_request_present(&mut self,
                          pipeline: PipelineId,
                          device_id: u64,
-                         sender: IpcSender<WebVRResult<VRDeviceCompositor>>) {
+                         sender: IpcSender<WebVRResult<VRDeviceType>>) {
         match self.access_check(pipeline, device_id).map(|d| d.clone()) {
             Ok(device) => {
                 self.presenting.insert(device_id, pipeline);
                 let data = device.borrow().get_display_data();
-                let compositor = VRDeviceCompositor::new(device.borrow_mut().deref_mut());
-                sender.send(Ok(compositor)).unwrap();
+                sender.send(Ok(device.borrow().device_type())).unwrap();
                 self.notify_event(VRDisplayEvent::PresentChange(data, true));
             },
             Err(msg) => {
@@ -216,6 +217,68 @@ impl WebVRThread {
             });
         }
     }
-
 }
 
+/*
+pub trait VRCompositor {
+    fn sync_poses(&self);
+    fn submit_frame(&self, u32, [f32; 4], [f32; 4]);
+}
+
+// a compositor for a hmd device_id
+pub trait VRCompositorCreator: Send {
+    fn create_compositor(&mut self, VRDeviceId) -> Box<VRCompositor>;
+}*/
+
+
+pub struct WebVRCompositorCreator;
+
+impl WebVRCompositorCreator {
+    pub fn new() -> Box<WebVRCompositorCreator> {
+        Box::new(WebVRCompositorCreator{})
+    }
+}
+
+impl webrender_traits::VRCompositorCreator for WebVRCompositorCreator {
+    fn create_compositor(&mut self, 
+                         device_type: webrender_traits::VRCompositorId) 
+                         -> Option<Box<webrender_traits::VRCompositor>> {
+
+        let device_type = VRDeviceType::from_u32(device_type).unwrap();
+        
+        match VRServiceManager::create_compositor(device_type) {
+            Ok(compositor) => Some(WebVRCompositor::new(compositor)),
+            Err(msg) => {
+                error!("Error creating VRCompositor: {:?}", msg);
+                None
+            }
+        }
+    }
+}
+
+struct WebVRCompositor {
+    compositor: RefCell<Box<VRCompositor>>
+}
+
+impl WebVRCompositor {
+    fn new(compositor: Box<VRCompositor>) -> Box<WebVRCompositor> {
+        Box::new(WebVRCompositor {
+            compositor: RefCell::new(compositor)
+        })
+    }
+}
+
+impl webrender_traits::VRCompositor for WebVRCompositor {
+    fn sync_poses(&self) {
+        self.compositor.borrow_mut().sync_poses();
+    }
+
+    fn submit_frame(&self, texture: u32, left: [f32; 4], right: [f32; 4]) {
+        let layer = VRLayer {
+            texture_id: texture,
+            left_bounds: left,
+            right_bounds: right
+        };
+        self.compositor.borrow_mut().submit_frame(&layer);
+    }
+}

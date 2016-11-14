@@ -76,7 +76,8 @@ pub enum ScriptThreadEventCategory {
     UpdateReplacedElement,
     WebSocketEvent,
     WorkerEvent,
-    ServiceWorkerEvent
+    ServiceWorkerEvent,
+    WebVREvent
 }
 
 /// An interface for receiving ScriptMsg values in an event loop. Used for synchronous DOM
