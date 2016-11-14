@@ -8,10 +8,13 @@
 #![deny(unsafe_code)]
 
 extern crate ipc_channel;
+#[macro_use]
+extern crate log;
 extern crate msg;
 extern crate util;
 extern crate script_traits;
 extern crate vr_traits;
+extern crate webrender_traits;
 
 mod webvr_thread;
-pub use webvr_thread::WebVRThread;
+pub use webvr_thread::{WebVRThread, WebVRCompositorCreator};
