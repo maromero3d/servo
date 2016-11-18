@@ -12,7 +12,7 @@ pub enum WebVRMsg {
     PollEvents(IpcSender<bool>),
     GetVRDisplays(IpcSender<WebVRResult<Vec<VRDisplayData>>>),
     GetFrameData(PipelineId, u64, f64, f64, IpcSender<WebVRResult<VRFrameData>>),
-    ResetPose(PipelineId, u64, Option<IpcSender<WebVRResult<()>>>),
+    ResetPose(PipelineId, u64, IpcSender<WebVRResult<VRDisplayData>>),
     RequestPresent(PipelineId, u64, IpcSender<WebVRResult<()>>),
     ExitPresent(PipelineId, u64, Option<IpcSender<WebVRResult<()>>>),
     Exit,
