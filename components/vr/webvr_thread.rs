@@ -128,18 +128,14 @@ impl WebVRThread {
     fn handle_reset_pose(&mut self,
                          pipeline: PipelineId,
                          device_id: u64,
-                         sender: Option<IpcSender<WebVRResult<()>>>) {
+                         sender: IpcSender<WebVRResult<VRDisplayData>>) {
         match self.access_check(pipeline, device_id) {
             Ok(device) => {
                 device.borrow_mut().reset_pose();
-                if let Some(sender) = sender {
-                    sender.send(Ok(())).unwrap()
-                }
+                sender.send(Ok(device.borrow().display_data())).unwrap();
             },
             Err(msg) => {
-                if let Some(sender) = sender {
-                    sender.send(Err(msg.into())).unwrap()
-                }
+                sender.send(Err(msg.into())).unwrap()
             }
         }
     }
