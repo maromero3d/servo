@@ -6,8 +6,7 @@ use util::thread::spawn_named;
 use std::collections::{HashMap, HashSet};
 use msg::constellation_msg::PipelineId;
 use script_traits::{ConstellationMsg, WebVREventMsg};
-use std::cell::RefCell;
-use std::ops::DerefMut;
+use std::ptr;
 use std::sync::mpsc::Sender;
 use std::{thread, time};
 use webrender_traits;
@@ -49,8 +48,13 @@ impl WebVRThread {
         sender
     }
 
+    #[allow(unsafe_code)]
     fn start(&mut self) {
-
+        unsafe {
+            // Set the shared raw pointer for the VRCompositors.
+            // See WebVRCompositorCreator for more details.
+            VR_MANAGER = &mut self.service;
+        }
         while let Ok(msg) = self.receiver.recv() {
             match msg {
                 WebVRMsg::RegisterContext(context) => {
@@ -84,6 +88,10 @@ impl WebVRThread {
                 },
             }
         }
+        unsafe {
+            // VRServiceManager instance will Drop, reset the shared pointer
+            VR_MANAGER = ptr::null_mut();
+        }
     }
 
     fn handle_register_context(&mut self, ctx: PipelineId) {
@@ -98,7 +106,7 @@ impl WebVRThread {
         let devices = self.service.get_devices();
         let mut displays = Vec::new();
         for device in devices {
-            displays.push(device.borrow().get_display_data());
+            displays.push(device.borrow().display_data());
         }
         sender.send(Ok(displays)).unwrap();
     }
@@ -111,7 +119,7 @@ impl WebVRThread {
                         sender: IpcSender<WebVRResult<VRFrameData>>) {
       match self.access_check(pipeline, device_id) {
             Ok(device) => {
-                sender.send(Ok(device.borrow().get_frame_data(near, far))).unwrap()
+                sender.send(Ok(device.borrow().inmediate_frame_data(near, far))).unwrap()
             },
             Err(msg) => sender.send(Err(msg.into())).unwrap()
         }
@@ -146,12 +154,12 @@ impl WebVRThread {
     fn handle_request_present(&mut self,
                          pipeline: PipelineId,
                          device_id: u64,
-                         sender: IpcSender<WebVRResult<VRDeviceType>>) {
+                         sender: IpcSender<WebVRResult<()>>) {
         match self.access_check(pipeline, device_id).map(|d| d.clone()) {
             Ok(device) => {
                 self.presenting.insert(device_id, pipeline);
-                let data = device.borrow().get_display_data();
-                sender.send(Ok(device.borrow().device_type())).unwrap();
+                let data = device.borrow().display_data();
+                sender.send(Ok(())).unwrap();
                 self.notify_event(VRDisplayEvent::PresentChange(data, true));
             },
             Err(msg) => {
@@ -163,16 +171,20 @@ impl WebVRThread {
     fn handle_exit_present(&mut self,
                          pipeline: PipelineId,
                          device_id: u64,
-                         sender: IpcSender<WebVRResult<()>>) {
+                         sender: Option<IpcSender<WebVRResult<()>>>) {
         match self.access_check(pipeline, device_id).map(|d| d.clone()) {
             Ok(device) => {
                 self.presenting.remove(&device_id);
-                sender.send(Ok(())).unwrap();
-                let data = device.borrow().get_display_data();
+                if let Some(sender) = sender {
+                    sender.send(Ok(())).unwrap();
+                }
+                let data = device.borrow().display_data();
                 self.notify_event(VRDisplayEvent::PresentChange(data, false));
             },
             Err(msg) => {
-                sender.send(Err(msg.into())).unwrap();
+                if let Some(sender) = sender {
+                    sender.send(Err(msg.into())).unwrap();
+                }
             }
         }
     }
@@ -206,11 +218,12 @@ impl WebVRThread {
             spawn_named("WebVRPollEvents".into(), move || {
                 loop {
                     if webvr_thread.send(WebVRMsg::PollEvents(sender.clone())).is_err() {
+                        // WebVR Thread closed
                         break;
                     }
-                    if receiver.recv().unwrap() == false {
+                    if !receiver.recv().unwrap_or(false) {
                         // WebVR Thread asked to unschedule this thread
-                        break; 
+                        break;
                     }
                     thread::sleep(time::Duration::from_millis(500));
                 }
@@ -219,17 +232,10 @@ impl WebVRThread {
     }
 }
 
-/*
-pub trait VRCompositor {
-    fn sync_poses(&self);
-    fn submit_frame(&self, u32, [f32; 4], [f32; 4]);
-}
-
-// a compositor for a hmd device_id
-pub trait VRCompositorCreator: Send {
-    fn create_compositor(&mut self, VRDeviceId) -> Box<VRCompositor>;
-}*/
-
+// In the compositor we use shared pointers instead of Arc<Mutex> for latency reasons.
+// This also avoids "JS DDoS" attacks: A Second JSContext doing a lot of calls
+// while the main one is presenting and demands both high framerate and low latency.
+static mut VR_MANAGER: *mut VRServiceManager = 0 as *mut _;
 
 pub struct WebVRCompositorCreator;
 
@@ -240,16 +246,26 @@ impl WebVRCompositorCreator {
 }
 
 impl webrender_traits::VRCompositorCreator for WebVRCompositorCreator {
+    #[allow(unsafe_code)]
     fn create_compositor(&mut self, 
-                         device_type: webrender_traits::VRCompositorId) 
+                         device_id: webrender_traits::VRCompositorId) 
                          -> Option<Box<webrender_traits::VRCompositor>> {
 
-        let device_type = VRDeviceType::from_u32(device_type).unwrap();
-        
-        match VRServiceManager::create_compositor(device_type) {
-            Ok(compositor) => Some(WebVRCompositor::new(compositor)),
-            Err(msg) => {
-                error!("Error creating VRCompositor: {:?}", msg);
+        if unsafe { VR_MANAGER.is_null() } {
+            error!("VRServiceManager not available when creating a new VRCompositor");
+            return None;
+        }
+
+        let device = unsafe {
+            (*VR_MANAGER).get_device(device_id)
+        };
+
+        match device {
+            Some(ref device) => {
+                Some(WebVRCompositor::new(device.as_ptr()))
+            },
+            None => {
+                error!("VRDevice not found when creating a new VRCompositor");
                 None
             }
         }
@@ -257,28 +273,35 @@ impl webrender_traits::VRCompositorCreator for WebVRCompositorCreator {
 }
 
 struct WebVRCompositor {
-    compositor: RefCell<Box<VRCompositor>>
+    device: *mut VRDevice
 }
 
 impl WebVRCompositor {
-    fn new(compositor: Box<VRCompositor>) -> Box<WebVRCompositor> {
+    fn new(device: *mut VRDevice) -> Box<WebVRCompositor> {
         Box::new(WebVRCompositor {
-            compositor: RefCell::new(compositor)
+            device: device
         })
     }
 }
 
 impl webrender_traits::VRCompositor for WebVRCompositor {
-    fn sync_poses(&self) {
-        self.compositor.borrow_mut().sync_poses();
+    #[allow(unsafe_code)]
+    fn sync_poses(&self, near: f64, far: f64) -> Vec<u8> {
+        unsafe {
+            (*self.device).sync_poses();
+            (*self.device).synced_frame_data(near, far).to_bytes()
+        }
     }
 
+    #[allow(unsafe_code)]
     fn submit_frame(&self, texture: u32, left: [f32; 4], right: [f32; 4]) {
         let layer = VRLayer {
             texture_id: texture,
             left_bounds: left,
             right_bounds: right
         };
-        self.compositor.borrow_mut().submit_frame(&layer);
+        unsafe {
+            (*self.device).submit_frame(&layer);
+        }
     }
 }
