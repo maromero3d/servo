@@ -1145,6 +1145,13 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
             }
         }
 
+        if let Some(chan) = self.webvr_thread.as_ref() {
+            debug!("Exiting WebVR thread.");
+            if let Err(e) = chan.send(WebVRMsg::Exit) {
+                warn!("Exit WebVR thread failed ({})", e);
+            }
+        }
+
         debug!("Exiting font cache thread.");
         self.font_cache_thread.exit();
 
