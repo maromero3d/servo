@@ -212,9 +212,14 @@ impl VRDisplayMethods for VRDisplay {
 
     fn ResetPose(&self) -> () {
         if let Some(wevbr_sender) = self.webvr_thread() {
+            let (sender, receiver) = ipc::channel().unwrap();
             wevbr_sender.send(WebVRMsg::ResetPose(self.global().pipeline_id(),
                                                   self.get_display_id(), 
-                                                  None)).unwrap();
+                                                  sender)).unwrap();
+            if let Ok(data) = receiver.recv().unwrap() {
+                // Some VRDisplay data might change after calling ResetPose()
+                self.display.borrow_mut().0 = data;
+            }
         }
     }
 
