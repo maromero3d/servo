@@ -55,7 +55,7 @@ impl VRMethods for VR {
 
     // https://w3c.github.io/webvr/#interface-navigator
     #[allow(unrooted_must_root)]
-    fn GetVRDisplays(&self) -> Rc<Promise> {
+    fn GetDisplays(&self) -> Rc<Promise> {
 
         let promise = Promise::new(&self.global());
         if !self.VrEnabled() {
