@@ -89,23 +89,23 @@ impl VRFrameDataMethods for VRFrameData {
     }
 
     #[allow(unsafe_code)]
-    fn LeftProjectionMatrix(&self, _cx: *mut JSContext) -> NonZero<*mut JSObject> {
-        unsafe { NonZero::new(self.left_proj.get()) }
+    unsafe fn LeftProjectionMatrix(&self, _cx: *mut JSContext) -> NonZero<*mut JSObject> {
+        NonZero::new(self.left_proj.get())
     }
 
     #[allow(unsafe_code)]
-    fn LeftViewMatrix(&self, _cx: *mut JSContext) -> NonZero<*mut JSObject> {
-        unsafe { NonZero::new(self.left_view.get()) }
+    unsafe fn LeftViewMatrix(&self, _cx: *mut JSContext) -> NonZero<*mut JSObject> {
+        NonZero::new(self.left_view.get())
     }
 
     #[allow(unsafe_code)]
-    fn RightProjectionMatrix(&self, _cx: *mut JSContext) -> NonZero<*mut JSObject> {
-        unsafe { NonZero::new(self.right_proj.get()) }
+    unsafe fn RightProjectionMatrix(&self, _cx: *mut JSContext) -> NonZero<*mut JSObject> {
+        NonZero::new(self.right_proj.get())
     }
 
     #[allow(unsafe_code)]
-    fn RightViewMatrix(&self, _cx: *mut JSContext) -> NonZero<*mut JSObject> {
-        unsafe { NonZero::new(self.right_view.get()) }
+    unsafe fn RightViewMatrix(&self, _cx: *mut JSContext) -> NonZero<*mut JSObject> {
+        NonZero::new(self.right_view.get())
     }
 
     fn Pose(&self) -> Root<VRPose> {

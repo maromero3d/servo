@@ -145,12 +145,11 @@ impl WebGLPaintThread {
     }
 
     fn handle_webvr_message(&self, message: webrender_traits::VRCompositorCommand) {
-        debug!("WebGL message: {:?}", message);
         match self.data {
             WebGLPaintTaskData::WebRender(ref api, id) => {
                 api.send_vr_compositor_command(id, message);
             }
-            WebGLPaintTaskData::Readback(ref ctx, _, _) => {
+            WebGLPaintTaskData::Readback(_, _, _) => {
                 error!("Webrender is required for WebVR implementation");
             }
         }

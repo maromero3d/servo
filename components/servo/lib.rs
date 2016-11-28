@@ -308,7 +308,7 @@ fn create_constellation(user_agent: Cow<'static, str>,
         constellation_chan.send(ConstellationMsg::SetWebVRThread(webvr_thread)).unwrap();
     }
 
-    if let Some(url) = opts.url {
+    if let Some(url) = url {
         constellation_chan.send(ConstellationMsg::InitLoadUrl(url)).unwrap();
     };
 

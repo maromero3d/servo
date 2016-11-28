@@ -97,32 +97,32 @@ impl VRPose {
 
 impl VRPoseMethods for VRPose {
     #[allow(unsafe_code)]
-    fn GetPosition(&self, _cx: *mut JSContext) -> Option<NonZero<*mut JSObject>> {
+    unsafe fn GetPosition(&self, _cx: *mut JSContext) -> Option<NonZero<*mut JSObject>> {
         heap_to_option(&self.position)
     }
 
     #[allow(unsafe_code)]
-    fn GetLinearVelocity(&self, _cx: *mut JSContext) -> Option<NonZero<*mut JSObject>> {
+    unsafe fn GetLinearVelocity(&self, _cx: *mut JSContext) -> Option<NonZero<*mut JSObject>> {
         heap_to_option(&self.linear_vel)
     }
 
     #[allow(unsafe_code)]
-    fn GetLinearAcceleration(&self, _cx: *mut JSContext) -> Option<NonZero<*mut JSObject>> {
+    unsafe fn GetLinearAcceleration(&self, _cx: *mut JSContext) -> Option<NonZero<*mut JSObject>> {
         heap_to_option(&self.linear_vel)
     }
 
     #[allow(unsafe_code)]
-    fn GetOrientation(&self, _cx: *mut JSContext) -> Option<NonZero<*mut JSObject>> {
+    unsafe fn GetOrientation(&self, _cx: *mut JSContext) -> Option<NonZero<*mut JSObject>> {
         heap_to_option(&self.orientation)
     }
 
     #[allow(unsafe_code)]
-    fn GetAngularVelocity(&self, _cx: *mut JSContext) -> Option<NonZero<*mut JSObject>> {
+    unsafe fn GetAngularVelocity(&self, _cx: *mut JSContext) -> Option<NonZero<*mut JSObject>> {
         heap_to_option(&self.angular_vel)
     }
 
     #[allow(unsafe_code)]
-    fn GetAngularAcceleration(&self, _cx: *mut JSContext) -> Option<NonZero<*mut JSObject>> {
+    unsafe fn GetAngularAcceleration(&self, _cx: *mut JSContext) -> Option<NonZero<*mut JSObject>> {
         heap_to_option(&self.angular_acc)
     }
 }
