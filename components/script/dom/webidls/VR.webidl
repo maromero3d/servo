@@ -4,7 +4,7 @@
 
 // https://w3c.github.io/webvr/#interface-navigator
 interface VR: EventTarget {
-  Promise<sequence<VRDisplay>> getVRDisplays();
+  Promise<sequence<VRDisplay>> getDisplays();
   //readonly attribute FrozenArray<VRDisplay> activeVRDisplays;
   readonly attribute boolean vrEnabled;
 };
