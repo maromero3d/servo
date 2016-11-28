@@ -14,7 +14,6 @@ use dom::globalscope::GlobalScope;
 use dom::vrpose::VRPose;
 use js::jsapi::{Heap, JSContext, JSObject};
 use std::cell::Cell;
-use time;
 use vr_traits::webvr;
 
 #[dom_struct]
@@ -25,7 +24,8 @@ pub struct VRFrameData {
     right_proj: Heap<*mut JSObject>,
     right_view: Heap<*mut JSObject>,
     pose: JS<VRPose>,
-    timestamp: Cell<u64>
+    timestamp: Cell<f64>,
+    first_timestamp: Cell<f64>
 }
 
 impl VRFrameData {
@@ -46,7 +46,8 @@ impl VRFrameData {
             right_proj: Heap::default(),
             right_view: Heap::default(),
             pose: JS::from_ref(&*pose),
-            timestamp: Cell::new(time::get_time().sec as u64)
+            timestamp: Cell::new(0.0),
+            first_timestamp: Cell::new(0.0)
         };
 
         framedata.left_proj.set(slice_to_array_buffer_view(global.get_cx(), &matrix));
@@ -76,12 +77,15 @@ impl VRFrameData {
         }
         self.pose.update(&self.global(), &data.pose);
         self.timestamp.set(data.timestamp);
+        if self.first_timestamp.get() == 0.0 {
+            self.first_timestamp.set(data.timestamp);
+        }
     }
 }
 
 impl VRFrameDataMethods for VRFrameData {
     fn Timestamp(&self) -> Finite<f64> {
-        Finite::wrap(self.timestamp.get() as f64)
+        Finite::wrap(self.timestamp.get() - self.first_timestamp.get())
     }
 
     #[allow(unsafe_code)]
