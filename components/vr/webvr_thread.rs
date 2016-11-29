@@ -6,8 +6,8 @@ use util::thread::spawn_named;
 use std::collections::{HashMap, HashSet};
 use msg::constellation_msg::PipelineId;
 use script_traits::{ConstellationMsg, WebVREventMsg};
-use std::ptr;
-use std::sync::mpsc::Sender;
+use std::sync::mpsc;
+use std::sync::mpsc::{Receiver, Sender};
 use std::{thread, time};
 use webrender_traits;
 
@@ -17,6 +17,7 @@ pub struct WebVRThread {
     service: VRServiceManager,
     contexts: HashSet<PipelineId>,
     constellation_chan: Sender<ConstellationMsg>,
+    vr_compositor_chan: WebVRCompositorSender,
     polling_events: bool,
     presenting: HashMap<u64, PipelineId>
 }
@@ -24,7 +25,8 @@ pub struct WebVRThread {
 impl WebVRThread {
     fn new (receiver: IpcReceiver<WebVRMsg>,
             sender: IpcSender<WebVRMsg>,
-            constellation_chan: Sender<ConstellationMsg>)
+            constellation_chan: Sender<ConstellationMsg>,
+            vr_compositor_chan: WebVRCompositorSender)
             -> WebVRThread {
         let mut service = VRServiceManager::new();
         service.register_defaults();
@@ -34,27 +36,25 @@ impl WebVRThread {
             service: service,
             contexts: HashSet::new(),
             constellation_chan: constellation_chan,
+            vr_compositor_chan: vr_compositor_chan,
             polling_events: false,
             presenting: HashMap::new()
         }
     }
 
-    pub fn spawn(constellation_chan: Sender<ConstellationMsg>) -> IpcSender<WebVRMsg> {
+    pub fn spawn(constellation_chan: Sender<ConstellationMsg>,
+                 vr_compositor_chan: WebVRCompositorSender)
+                 -> IpcSender<WebVRMsg> {
         let (sender, receiver) = ipc::channel().unwrap();
         let sender_clone = sender.clone();
         spawn_named("WebVRThread".into(), move || {
-            WebVRThread::new(receiver, sender_clone, constellation_chan).start();
+            WebVRThread::new(receiver, sender_clone, constellation_chan, vr_compositor_chan).start();
         });
         sender
     }
 
     #[allow(unsafe_code)]
     fn start(&mut self) {
-        unsafe {
-            // Set the shared raw pointer for the VRCompositors.
-            // See WebVRCompositorCreator for more details.
-            VR_MANAGER = &mut self.service;
-        }
         while let Ok(msg) = self.receiver.recv() {
             match msg {
                 WebVRMsg::RegisterContext(context) => {
@@ -83,14 +83,13 @@ impl WebVRThread {
                 WebVRMsg::ExitPresent(pipeline_id, device_id, sender) => {
                     self.handle_exit_present(pipeline_id, device_id, sender);
                 },
+                WebVRMsg::CreateCompositor(device_id) => {
+                    self.handle_create_compositor(device_id);
+                },
                 WebVRMsg::Exit => {
                     break
                 },
             }
-        }
-        unsafe {
-            // VRServiceManager instance will Drop, reset the shared pointer
-            VR_MANAGER = ptr::null_mut();
         }
     }
 
@@ -185,6 +184,11 @@ impl WebVRThread {
         }
     }
 
+    fn handle_create_compositor(&mut self, device_id: u64) {
+        let compositor = self.service.get_device(device_id).map(|d| WebVRCompositor(d.as_ptr()));
+        self.vr_compositor_chan.send(compositor).unwrap();
+    }
+
     fn poll_events(&mut self, sender: IpcSender<bool>) {
         let events = self.service.poll_events();
         if events.len() > 0 {
@@ -228,23 +232,34 @@ impl WebVRThread {
     }
 }
 
-// In the compositor we use shared pointers instead of Arc<Mutex> for latency reasons.
-// This also avoids "JS DDoS" attacks: A Second JSContext doing a lot of calls
+// Note about WebVRCompositorHandler implementation:
+// Raw pointers are used instead of Arc<Mutex> as a heavy optimization for latency reasons.
+// This also avoids "JS DDoS" attacks: A Second JSContext doing a lot of calls.
 // while the main one is presenting and demands both high framerate and low latency.
-static mut VR_MANAGER: *mut VRServiceManager = 0 as *mut _;
 
+pub struct WebVRCompositor(*mut VRDevice);
 pub struct WebVRCompositorHandler {
-    compositors: HashMap<webrender_traits::VRCompositorId, *mut VRDevice>
+    compositors: HashMap<webrender_traits::VRCompositorId, WebVRCompositor>,
+    webvr_thread_receiver: Receiver<Option<WebVRCompositor>>,
+    webvr_thread_sender: Option<IpcSender<WebVRMsg>>
 }
 
 #[allow(unsafe_code)]
-unsafe impl Send for WebVRCompositorHandler {}
+unsafe impl Send for WebVRCompositor {}
+
+pub type WebVRCompositorSender = Sender<Option<WebVRCompositor>>;
 
 impl WebVRCompositorHandler {
-    pub fn new() -> Box<WebVRCompositorHandler> {
-        Box::new(WebVRCompositorHandler{
-            compositors: HashMap::new()
-        })
+
+    pub fn new() -> (Box<WebVRCompositorHandler>, WebVRCompositorSender) {
+        let (sender, receiver) = mpsc::channel();
+        let instance = Box::new(WebVRCompositorHandler{
+            compositors: HashMap::new(),
+            webvr_thread_receiver: receiver,
+            webvr_thread_sender: None
+        });
+
+        (instance, sender)
     }
 }
 
@@ -259,8 +274,8 @@ impl webrender_traits::VRCompositorHandler for WebVRCompositorHandler {
             webrender_traits::VRCompositorCommand::SyncPoses(compositor_id, near, far, sender) => {
                 if let Some(compositor) = self.compositors.get(&compositor_id) {
                     let pose = unsafe {
-                        (**compositor).sync_poses();
-                        (**compositor).synced_frame_data(near, far).to_bytes()
+                        (*compositor.0).sync_poses();
+                        (*compositor.0).synced_frame_data(near, far).to_bytes()
                     };
                     let _result = sender.send(Ok(pose));
                 } else {
@@ -276,7 +291,7 @@ impl webrender_traits::VRCompositorHandler for WebVRCompositorHandler {
                             right_bounds: right_bounds
                         };
                         unsafe {
-                            (**compositor).submit_frame(&layer);
+                            (*compositor.0).submit_frame(&layer);
                         }
                     }
                 }
@@ -291,23 +306,22 @@ impl webrender_traits::VRCompositorHandler for WebVRCompositorHandler {
 impl WebVRCompositorHandler {
     #[allow(unsafe_code)]
     fn create_compositor(&mut self, device_id: webrender_traits::VRCompositorId) {
+        if let Some(ref sender) = self.webvr_thread_sender {
+            sender.send(WebVRMsg::CreateCompositor(device_id)).unwrap();
+            let device = self.webvr_thread_receiver.recv().unwrap();
 
-        if unsafe { VR_MANAGER.is_null() } {
-            error!("VRServiceManager not available when creating a new VRCompositor");
-            return;
+            match device {
+                Some(device) => {
+                    self.compositors.insert(device_id, device);
+                },
+                None => {
+                    error!("VRDevice not found when creating a new VRCompositor");
+                }
+            };
         }
+    }
 
-        let device = unsafe {
-            (*VR_MANAGER).get_device(device_id)
-        };
-
-        match device {
-            Some(ref device) => {
-                self.compositors.insert(device_id, device.as_ptr());
-            },
-            None => {
-                error!("VRDevice not found when creating a new VRCompositor");
-            }
-        };
+    pub fn set_webvr_thread_sender(&mut self, sender: IpcSender<WebVRMsg>) {
+        self.webvr_thread_sender = Some(sender);
     }
 }
