@@ -233,23 +233,68 @@ impl WebVRThread {
 // while the main one is presenting and demands both high framerate and low latency.
 static mut VR_MANAGER: *mut VRServiceManager = 0 as *mut _;
 
-pub struct WebVRCompositorCreator;
+pub struct WebVRCompositorHandler {
+    compositors: HashMap<webrender_traits::VRCompositorId, *mut VRDevice>
+}
 
-impl WebVRCompositorCreator {
-    pub fn new() -> Box<WebVRCompositorCreator> {
-        Box::new(WebVRCompositorCreator{})
+#[allow(unsafe_code)]
+unsafe impl Send for WebVRCompositorHandler {}
+
+impl WebVRCompositorHandler {
+    pub fn new() -> Box<WebVRCompositorHandler> {
+        Box::new(WebVRCompositorHandler{
+            compositors: HashMap::new()
+        })
     }
 }
 
-impl webrender_traits::VRCompositorCreator for WebVRCompositorCreator {
+impl webrender_traits::VRCompositorHandler for WebVRCompositorHandler {
+
     #[allow(unsafe_code)]
-    fn create_compositor(&mut self, 
-                         device_id: webrender_traits::VRCompositorId) 
-                         -> Option<Box<webrender_traits::VRCompositor>> {
+    fn handle(&mut self, cmd: webrender_traits::VRCompositorCommand, texture_id: Option<u32>) {
+        match cmd {
+            webrender_traits::VRCompositorCommand::Create(compositor_id) => {
+                self.create_compositor(compositor_id);
+            }
+            webrender_traits::VRCompositorCommand::SyncPoses(compositor_id, near, far, sender) => {
+                if let Some(compositor) = self.compositors.get(&compositor_id) {
+                    let pose = unsafe {
+                        (**compositor).sync_poses();
+                        (**compositor).synced_frame_data(near, far).to_bytes()
+                    };
+                    let _result = sender.send(Ok(pose));
+                } else {
+                    let _result = sender.send(Err(()));
+                }
+            }
+            webrender_traits::VRCompositorCommand::SubmitFrame(compositor_id, left_bounds, right_bounds) => {
+                if let Some(compositor) = self.compositors.get(&compositor_id) {
+                    if let Some(texture_id) = texture_id {
+                        let layer = VRLayer {
+                            texture_id: texture_id,
+                            left_bounds: left_bounds,
+                            right_bounds: right_bounds
+                        };
+                        unsafe {
+                            (**compositor).submit_frame(&layer);
+                        }
+                    }
+                }
+            }
+            webrender_traits::VRCompositorCommand::Release(compositor_id) => {
+                self.compositors.remove(&compositor_id);
+            }
+        }
+    }
+}
+
+impl WebVRCompositorHandler {
+    #[allow(unsafe_code)]
+    fn create_compositor(&mut self, device_id: webrender_traits::VRCompositorId) {
 
         if unsafe { VR_MANAGER.is_null() } {
             error!("VRServiceManager not available when creating a new VRCompositor");
-            return None;
+            return;
         }
 
         let device = unsafe {
@@ -258,46 +303,11 @@ impl webrender_traits::VRCompositorCreator for WebVRCompositorCreator {
 
         match device {
             Some(ref device) => {
-                Some(WebVRCompositor::new(device.as_ptr()))
+                self.compositors.insert(device_id, device.as_ptr());
             },
             None => {
                 error!("VRDevice not found when creating a new VRCompositor");
-                None
             }
-        }
-    }
-}
-
-struct WebVRCompositor {
-    device: *mut VRDevice
-}
-
-impl WebVRCompositor {
-    fn new(device: *mut VRDevice) -> Box<WebVRCompositor> {
-        Box::new(WebVRCompositor {
-            device: device
-        })
-    }
-}
-
-impl webrender_traits::VRCompositor for WebVRCompositor {
-    #[allow(unsafe_code)]
-    fn sync_poses(&self, near: f64, far: f64) -> Vec<u8> {
-        unsafe {
-            (*self.device).sync_poses();
-            (*self.device).synced_frame_data(near, far).to_bytes()
-        }
-    }
-
-    #[allow(unsafe_code)]
-    fn submit_frame(&self, texture: u32, left: [f32; 4], right: [f32; 4]) {
-        let layer = VRLayer {
-            texture_id: texture,
-            left_bounds: left,
-            right_bounds: right
         };
-        unsafe {
-            (*self.device).submit_frame(&layer);
-        }
     }
 }
