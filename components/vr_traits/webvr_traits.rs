@@ -15,5 +15,6 @@ pub enum WebVRMsg {
     ResetPose(PipelineId, u64, IpcSender<WebVRResult<VRDisplayData>>),
     RequestPresent(PipelineId, u64, IpcSender<WebVRResult<()>>),
     ExitPresent(PipelineId, u64, Option<IpcSender<WebVRResult<()>>>),
+    CreateCompositor(u64),
     Exit,
 }

@@ -193,6 +193,7 @@ impl<Window> Browser<Window> where Window: WindowMethods + 'static {
                                                                     debugger_chan,
                                                                     devtools_chan,
                                                                     supports_clipboard,
+                                                                    &webrender,
                                                                     webrender_api_sender.clone());
 
         // Send the constellation's swmanager sender to service worker manager thread
@@ -202,10 +203,6 @@ impl<Window> Browser<Window> where Window: WindowMethods + 'static {
             if let Some(port) = opts.webdriver_port {
                 webdriver(port, constellation_chan.clone());
             }
-        }
-
-        if cfg!(target_os = "windows") {
-            webrender.set_vr_compositor_handler(WebVRCompositorHandler::new());
         }
 
         // The compositor coordinates with the client window to create the final
@@ -264,6 +261,7 @@ fn create_constellation(user_agent: Cow<'static, str>,
                         debugger_chan: Option<debugger::Sender>,
                         devtools_chan: Option<Sender<devtools_traits::DevtoolsControlMsg>>,
                         supports_clipboard: bool,
+                        webrender: &webrender::Renderer,
                         webrender_api_sender: webrender_traits::RenderApiSender)
                         -> (Sender<ConstellationMsg>, SWManagerSenders) {
     let bluetooth_thread: IpcSender<BluetoothRequest> = BluetoothThreadFactory::new();
@@ -300,7 +298,12 @@ fn create_constellation(user_agent: Cow<'static, str>,
                         script::script_thread::ScriptThread>::start(initial_state);
 
     if cfg!(target_os = "windows") {
-        let webvr_thread = WebVRThread::spawn(constellation_chan.clone());
+        // WebVR initialization
+        let (mut handler, sender) = WebVRCompositorHandler::new();
+        let webvr_thread = WebVRThread::spawn(constellation_chan.clone(), sender);
+        handler.set_webvr_thread_sender(webvr_thread.clone());
+
+        webrender.set_vr_compositor_handler(handler);
         constellation_chan.send(ConstellationMsg::SetWebVRThread(webvr_thread)).unwrap();
     }
 
