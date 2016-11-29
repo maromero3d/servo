@@ -6,7 +6,7 @@ use core::nonzero::NonZero;
 use dom::bindings::cell::DOMRefCell;
 use dom::bindings::codegen::Bindings::VRStageParametersBinding;
 use dom::bindings::codegen::Bindings::VRStageParametersBinding::VRStageParametersMethods;
-use dom::bindings::conversions::slice_to_array_buffer_view;
+use dom::bindings::conversions::{slice_to_array_buffer_view, update_array_buffer_view};
 use dom::bindings::js::Root;
 use dom::bindings::reflector::{Reflector, reflect_dom_object};
 use dom::bindings::num::Finite;
@@ -45,6 +45,14 @@ impl VRStageParameters {
         reflect_dom_object(box VRStageParameters::new_inherited(&parameters, global),
                            global,
                            VRStageParametersBinding::Wrap)
+    }
+
+    #[allow(unsafe_code)]
+    pub fn update(&self, parameters: &webvr::VRStageParameters) {
+        unsafe {
+            update_array_buffer_view(self.transform.get(), &parameters.sitting_to_standing_transform);
+        }
+        self.parameters.borrow_mut().0 = parameters.clone();
     }
 }
 
