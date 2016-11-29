@@ -17,4 +17,4 @@ extern crate vr_traits;
 extern crate webrender_traits;
 
 mod webvr_thread;
-pub use webvr_thread::{WebVRThread, WebVRCompositorCreator};
+pub use webvr_thread::{WebVRThread, WebVRCompositorHandler};
