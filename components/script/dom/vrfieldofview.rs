@@ -24,7 +24,6 @@ pub struct WebVRFieldOfView(webvr::VRFieldOfView);
 no_jsmanaged_fields!(WebVRFieldOfView);
 
 impl VRFieldOfView {
-
     fn new_inherited(fov: &webvr::VRFieldOfView) -> VRFieldOfView {
         VRFieldOfView {
             reflector_: Reflector::new(),
@@ -40,7 +39,6 @@ impl VRFieldOfView {
 }
 
 impl VRFieldOfViewMethods for VRFieldOfView {
-
     // https://w3c.github.io/webvr/#interface-interface-vrfieldofview
     fn UpDegrees(&self) -> Finite<f64> {
         Finite::wrap(self.fov.borrow().0.up_degrees)

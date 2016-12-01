@@ -30,7 +30,6 @@ pub struct WebVREyeParameters(webvr::VREyeParameters);
 no_jsmanaged_fields!(WebVREyeParameters);
 
 impl VREyeParameters {
-
     #[allow(unrooted_must_root)]
     fn new_inherited(parameters: &webvr::VREyeParameters, global: &GlobalScope) -> VREyeParameters {
         let mut result = VREyeParameters {
@@ -52,9 +51,7 @@ impl VREyeParameters {
 }
 
 impl VREyeParametersMethods for VREyeParameters {
-
     // https://w3c.github.io/webvr/#dom-vreyeparameters-offset
-    #[allow(unsafe_code)]
     unsafe fn Offset(&self, _cx: *mut JSContext) -> NonZero<*mut JSObject> {
         NonZero::new(self.offset.get())
     }

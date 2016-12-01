@@ -8,8 +8,8 @@ use dom::bindings::codegen::Bindings::VRStageParametersBinding;
 use dom::bindings::codegen::Bindings::VRStageParametersBinding::VRStageParametersMethods;
 use dom::bindings::conversions::{slice_to_array_buffer_view, update_array_buffer_view};
 use dom::bindings::js::Root;
-use dom::bindings::reflector::{Reflector, reflect_dom_object};
 use dom::bindings::num::Finite;
+use dom::bindings::reflector::{Reflector, reflect_dom_object};
 use dom::globalscope::GlobalScope;
 use js::jsapi::{Heap, JSContext, JSObject};
 use vr_traits::webvr;
@@ -28,7 +28,6 @@ pub struct WebVRStageParameters(webvr::VRStageParameters);
 no_jsmanaged_fields!(WebVRStageParameters);
 
 impl VRStageParameters {
-
     #[allow(unrooted_must_root)]
     fn new_inherited(parameters: &webvr::VRStageParameters, global: &GlobalScope) -> VRStageParameters {
         let mut stage = VRStageParameters {
@@ -57,9 +56,7 @@ impl VRStageParameters {
 }
 
 impl VRStageParametersMethods for VRStageParameters {
-
     // https://w3c.github.io/webvr/#dom-vrstageparameters-sittingtostandingtransform
-    #[allow(unsafe_code)]
     unsafe fn SittingToStandingTransform(&self, _cx: *mut JSContext) -> NonZero<*mut JSObject> {
         NonZero::new(self.transform.get())
     }

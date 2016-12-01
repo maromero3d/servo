@@ -1116,7 +1116,8 @@ impl<Window: WindowMethods> IOCompositor<Window> {
                     let delta = (combined_event.delta / self.scale).to_untyped();
                     let cursor =
                         (combined_event.cursor.to_f32() / self.scale).to_untyped();
-                    self.webrender_api.scroll(delta, cursor, combined_event.phase);
+                    let location = webrender_traits::ScrollLocation::Delta(delta);
+                    self.webrender_api.scroll(location, cursor, combined_event.phase);
                     last_combined_event = None
                 }
             }
@@ -1157,7 +1158,8 @@ impl<Window: WindowMethods> IOCompositor<Window> {
         if let Some(combined_event) = last_combined_event {
             let delta = (combined_event.delta / self.scale).to_untyped();
             let cursor = (combined_event.cursor.to_f32() / self.scale).to_untyped();
-            self.webrender_api.scroll(delta, cursor, combined_event.phase);
+            let location = webrender_traits::ScrollLocation::Delta(delta);
+            self.webrender_api.scroll(location, cursor, combined_event.phase);
             self.waiting_for_results_of_scroll = true
         }
 

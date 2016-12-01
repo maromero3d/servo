@@ -50,10 +50,10 @@ use js::jsapi::{HandleId, HandleObject, HandleValue, JSContext};
 use js::jsapi::{JSObject, JSString, JS_GetArrayBufferViewType};
 use js::jsapi::{JS_GetLatin1StringCharsAndLength, JS_GetObjectAsArrayBuffer, JS_GetObjectAsArrayBufferView};
 use js::jsapi::{JS_GetReservedSlot, JS_GetTwoByteStringCharsAndLength};
+use js::jsapi::{JS_IsArrayObject, JS_NewStringCopyN, JS_StringHasLatin1Chars};
+use js::jsapi::{JS_NewFloat32Array, JS_NewFloat64Array};
 use js::jsapi::{JS_NewInt8Array, JS_NewInt16Array, JS_NewInt32Array};
 use js::jsapi::{JS_NewUint8Array, JS_NewUint16Array, JS_NewUint32Array};
-use js::jsapi::{JS_NewFloat32Array, JS_NewFloat64Array};
-use js::jsapi::{JS_IsArrayObject, JS_NewStringCopyN, JS_StringHasLatin1Chars};
 use js::jsapi::{MutableHandleValue, Type};
 use js::jsval::{ObjectValue, StringValue};
 use js::rust::{ToString, get_object_class, is_dom_class, is_dom_object, maybe_wrap_value};
@@ -635,7 +635,7 @@ pub unsafe fn is_array_like(cx: *mut JSContext, value: HandleValue) -> bool {
 }
 
 /// Creates a typed JS array from a Rust slice
-pub fn slice_to_array_buffer_view<T>(cx: *mut JSContext, data: &[T]) -> *mut JSObject 
+pub fn slice_to_array_buffer_view<T>(cx: *mut JSContext, data: &[T]) -> *mut JSObject
     where T: ArrayBufferViewContents
 {
     unsafe {

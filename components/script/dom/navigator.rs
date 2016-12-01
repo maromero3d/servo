@@ -118,8 +118,8 @@ impl NavigatorMethods for Navigator {
         true
     }
 
-    // https://w3c.github.io/webvr/#interface-navigator
     #[allow(unrooted_must_root)]
+    // https://w3c.github.io/webvr/#interface-navigator
     fn Vr(&self) -> Root<VR> {
         self.vr.or_init(|| VR::new(&self.global()))
     }

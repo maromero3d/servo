@@ -26,8 +26,8 @@ pub struct VRPose {
 }
 
 #[allow(unsafe_code)]
-fn update_typed_array(cx: *mut JSContext, 
-                      src: Option<&[f32]>, 
+fn update_typed_array(cx: *mut JSContext,
+                      src: Option<&[f32]>,
                       dst: &DOMRefCell<Heap<*mut JSObject>>) {
     let mut dst = dst.borrow_mut();
     match src {
@@ -62,7 +62,6 @@ fn heap_to_option(heap: &DOMRefCell<Heap<*mut JSObject>>) -> Option<NonZero<*mut
 }
 
 impl VRPose {
-
     #[allow(unrooted_must_root)]
     fn new_inherited(global: &GlobalScope, pose: &webvr::VRPose) -> VRPose {
         let result = VRPose {
@@ -97,31 +96,37 @@ impl VRPose {
 
 impl VRPoseMethods for VRPose {
     #[allow(unsafe_code)]
+    // https://w3c.github.io/webvr/#dom-vrpose-position
     unsafe fn GetPosition(&self, _cx: *mut JSContext) -> Option<NonZero<*mut JSObject>> {
         heap_to_option(&self.position)
     }
 
     #[allow(unsafe_code)]
+    // https://w3c.github.io/webvr/#dom-vrpose-linearvelocity
     unsafe fn GetLinearVelocity(&self, _cx: *mut JSContext) -> Option<NonZero<*mut JSObject>> {
         heap_to_option(&self.linear_vel)
     }
 
     #[allow(unsafe_code)]
+    // https://w3c.github.io/webvr/#dom-vrpose-linearacceleration
     unsafe fn GetLinearAcceleration(&self, _cx: *mut JSContext) -> Option<NonZero<*mut JSObject>> {
         heap_to_option(&self.linear_vel)
     }
 
     #[allow(unsafe_code)]
+    // https://w3c.github.io/webvr/#dom-vrpose-orientation
     unsafe fn GetOrientation(&self, _cx: *mut JSContext) -> Option<NonZero<*mut JSObject>> {
         heap_to_option(&self.orientation)
     }
 
     #[allow(unsafe_code)]
+    // https://w3c.github.io/webvr/#dom-vrpose-angularvelocity
     unsafe fn GetAngularVelocity(&self, _cx: *mut JSContext) -> Option<NonZero<*mut JSObject>> {
         heap_to_option(&self.angular_vel)
     }
 
     #[allow(unsafe_code)]
+    // https://w3c.github.io/webvr/#dom-vrpose-angularacceleration
     unsafe fn GetAngularAcceleration(&self, _cx: *mut JSContext) -> Option<NonZero<*mut JSObject>> {
         heap_to_option(&self.angular_acc)
     }

@@ -6,21 +6,21 @@ use dom::bindings::cell::DOMRefCell;
 use dom::bindings::codegen::Bindings::VRBinding;
 use dom::bindings::codegen::Bindings::VRBinding::VRMethods;
 use dom::bindings::error::Error;
-use dom::bindings::js::{JS, Root};
 use dom::bindings::inheritance::Castable;
+use dom::bindings::js::{JS, Root};
 use dom::bindings::reflector::{Reflectable, reflect_dom_object};
 use dom::event::Event;
 use dom::eventtarget::EventTarget;
-use dom::promise::Promise;
 use dom::globalscope::GlobalScope;
+use dom::promise::Promise;
 use dom::vrdisplay::VRDisplay;
 use dom::vrdisplayevent::VRDisplayEvent;
 use ipc_channel::ipc;
 use ipc_channel::ipc::IpcSender;
-use std::rc::Rc;
 use script_traits::WebVREventMsg;
-use vr_traits::webvr;
+use std::rc::Rc;
 use vr_traits::WebVRMsg;
+use vr_traits::webvr;
 
 #[dom_struct]
 pub struct VR {
@@ -43,7 +43,7 @@ impl VR {
         root.register();
         root
     }
-} 
+}
 
 impl Drop for VR {
     fn drop(&mut self) {
@@ -52,14 +52,12 @@ impl Drop for VR {
 }
 
 impl VRMethods for VR {
-
-    // https://w3c.github.io/webvr/#interface-navigator
     #[allow(unrooted_must_root)]
+    // https://w3c.github.io/webvr/#interface-navigator
     fn GetDisplays(&self) -> Rc<Promise> {
-
         let promise = Promise::new(&self.global());
         if !self.VrEnabled() {
-            // WebVR spec: The Promise MUST be rejected if the Document object is inside 
+            // WebVR spec: The Promise MUST be rejected if the Document object is inside
             // an iframe that does not have the allowvr attribute set.
             promise.reject_error(promise.global().get_cx(), Error::Security);
             return promise;
@@ -100,7 +98,6 @@ impl VRMethods for VR {
 
 
 impl VR {
-
     fn webvr_thread(&self) -> Option<IpcSender<WebVRMsg>> {
         self.global().as_window().webvr_thread()
     }
@@ -168,8 +165,9 @@ impl VR {
         };
     }
 
-    fn notify_event(&self, display: &Root<VRDisplay>, event: &webvr::VRDisplayEvent) {
+    fn notify_event(&self, display: &VRDisplay, event: &webvr::VRDisplayEvent) {
         let event = VRDisplayEvent::new_from_webvr(&self.global(), &display, &event);
         event.upcast::<Event>().fire(self.upcast());
     }
 }
+

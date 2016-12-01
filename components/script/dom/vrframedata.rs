@@ -29,10 +29,8 @@ pub struct VRFrameData {
 }
 
 impl VRFrameData {
-
     #[allow(unrooted_must_root)]
     fn new(global: &GlobalScope) -> Root<VRFrameData> {
-
         let matrix = [1.0, 0.0, 0.0, 0.0,
                       0.0, 1.0, 0.0, 0.0,
                       0.0, 0.0, 1.0, 0.0,
@@ -84,30 +82,36 @@ impl VRFrameData {
 }
 
 impl VRFrameDataMethods for VRFrameData {
+    // https://w3c.github.io/webvr/#dom-vrframedata-timestamp
     fn Timestamp(&self) -> Finite<f64> {
         Finite::wrap(self.timestamp.get() - self.first_timestamp.get())
     }
 
     #[allow(unsafe_code)]
+    // https://w3c.github.io/webvr/#dom-vrframedata-leftprojectionmatrix
     unsafe fn LeftProjectionMatrix(&self, _cx: *mut JSContext) -> NonZero<*mut JSObject> {
         NonZero::new(self.left_proj.get())
     }
 
     #[allow(unsafe_code)]
+    // https://w3c.github.io/webvr/#dom-vrframedata-leftviewmatrix
     unsafe fn LeftViewMatrix(&self, _cx: *mut JSContext) -> NonZero<*mut JSObject> {
         NonZero::new(self.left_view.get())
     }
 
     #[allow(unsafe_code)]
+    // https://w3c.github.io/webvr/#dom-vrframedata-rightprojectionmatrix
     unsafe fn RightProjectionMatrix(&self, _cx: *mut JSContext) -> NonZero<*mut JSObject> {
         NonZero::new(self.right_proj.get())
     }
 
     #[allow(unsafe_code)]
+    // https://w3c.github.io/webvr/#dom-vrframedata-rightviewmatrix
     unsafe fn RightViewMatrix(&self, _cx: *mut JSContext) -> NonZero<*mut JSObject> {
         NonZero::new(self.right_view.get())
     }
 
+    // https://w3c.github.io/webvr/#dom-vrframedata-pose
     fn Pose(&self) -> Root<VRPose> {
         Root::from_ref(&*self.pose)
     }

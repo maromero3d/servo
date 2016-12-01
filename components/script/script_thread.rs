@@ -88,11 +88,11 @@ use script_traits::{ScriptThreadFactory, TimerEvent, TimerEventRequest, TimerSou
 use script_traits::{TouchEventType, TouchId, UntrustedNodeAddress, WindowSizeData, WindowSizeType};
 use script_traits::CompositorEvent::{KeyEvent, MouseButtonEvent, MouseMoveEvent, ResizeEvent};
 use script_traits::CompositorEvent::{TouchEvent, TouchpadPressureEvent};
+use script_traits::WebVREventMsg;
 use script_traits::webdriver_msg::WebDriverScriptCommand;
 use serviceworkerjob::{Job, JobQueue, AsyncJobHandler, FinishJobHandler, InvokeType, SettleType};
 use servo_url::ServoUrl;
 use std::cell::Cell;
-use script_traits::WebVREventMsg;
 use std::collections::{hash_map, HashMap, HashSet};
 use std::option::Option;
 use std::ptr;

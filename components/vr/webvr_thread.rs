@@ -1,14 +1,18 @@
-use vr_traits::{WebVRMsg, WebVRResult};
-use vr_traits::webvr::*;
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 use ipc_channel::ipc;
 use ipc_channel::ipc::{IpcReceiver, IpcSender};
-use util::thread::spawn_named;
-use std::collections::{HashMap, HashSet};
 use msg::constellation_msg::PipelineId;
 use script_traits::{ConstellationMsg, WebVREventMsg};
+use std::{thread, time};
+use std::collections::{HashMap, HashSet};
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
-use std::{thread, time};
+use util::thread::spawn_named;
+use vr_traits::{WebVRMsg, WebVRResult};
+use vr_traits::webvr::*;
 use webrender_traits;
 
 pub struct WebVRThread {
@@ -23,11 +27,11 @@ pub struct WebVRThread {
 }
 
 impl WebVRThread {
-    fn new (receiver: IpcReceiver<WebVRMsg>,
-            sender: IpcSender<WebVRMsg>,
-            constellation_chan: Sender<ConstellationMsg>,
-            vr_compositor_chan: WebVRCompositorSender)
-            -> WebVRThread {
+    fn new(receiver: IpcReceiver<WebVRMsg>,
+           sender: IpcSender<WebVRMsg>,
+           constellation_chan: Sender<ConstellationMsg>,
+           vr_compositor_chan: WebVRCompositorSender)
+           -> WebVRThread {
         let mut service = VRServiceManager::new();
         service.register_defaults();
         WebVRThread {
@@ -110,7 +114,7 @@ impl WebVRThread {
         sender.send(Ok(displays)).unwrap();
     }
 
-    fn handle_framedata(&mut self, 
+    fn handle_framedata(&mut self,
                         pipeline: PipelineId,
                         device_id: u64,
                         near: f64,
@@ -250,10 +254,9 @@ unsafe impl Send for WebVRCompositor {}
 pub type WebVRCompositorSender = Sender<Option<WebVRCompositor>>;
 
 impl WebVRCompositorHandler {
-
     pub fn new() -> (Box<WebVRCompositorHandler>, WebVRCompositorSender) {
         let (sender, receiver) = mpsc::channel();
-        let instance = Box::new(WebVRCompositorHandler{
+        let instance = Box::new(WebVRCompositorHandler {
             compositors: HashMap::new(),
             webvr_thread_receiver: receiver,
             webvr_thread_sender: None
@@ -264,7 +267,6 @@ impl WebVRCompositorHandler {
 }
 
 impl webrender_traits::VRCompositorHandler for WebVRCompositorHandler {
-
     #[allow(unsafe_code)]
     fn handle(&mut self, cmd: webrender_traits::VRCompositorCommand, texture_id: Option<u32>) {
         match cmd {

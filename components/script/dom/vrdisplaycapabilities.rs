@@ -23,7 +23,6 @@ pub struct WebVRDisplayCapabilities(webvr::VRDisplayCapabilities);
 no_jsmanaged_fields!(WebVRDisplayCapabilities);
 
 impl VRDisplayCapabilities {
-
     fn new_inherited(capabilities:&webvr::VRDisplayCapabilities) -> VRDisplayCapabilities {
         VRDisplayCapabilities {
             reflector_: Reflector::new(),
@@ -39,7 +38,6 @@ impl VRDisplayCapabilities {
 }
 
 impl VRDisplayCapabilitiesMethods for VRDisplayCapabilities {
-
     // https://w3c.github.io/webvr/#dom-vrdisplaycapabilities-hasposition
     fn HasPosition(&self) -> bool {
         self.capabilities.borrow().0.has_position
