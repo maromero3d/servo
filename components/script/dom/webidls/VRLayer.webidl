@@ -8,7 +8,6 @@
 
 dictionary VRLayer {
   HTMLCanvasElement source;
-  
   sequence<float> leftBounds;
   sequence<float> rightBounds;
 };

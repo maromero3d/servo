@@ -1294,7 +1294,7 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
                     // Notify script thread
                     pipeline.script_chan.send(ConstellationControlMsg::WebVREvent(id, event.clone())).unwrap();
                 },
-                None =>  warn!("constellation got webvr event for dead pipeline")
+                None => warn!("constellation got webvr event for dead pipeline")
             }
         }
     }

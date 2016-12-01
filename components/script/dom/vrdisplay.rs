@@ -16,8 +16,8 @@ use dom::bindings::codegen::Bindings::WindowBinding::WindowBinding::WindowMethod
 use dom::bindings::inheritance::Castable;
 use dom::bindings::js::{JS, MutNullableHeap, MutHeap, Root};
 use dom::bindings::num::Finite;
-use dom::bindings::reflector::{Reflectable, reflect_dom_object};
 use dom::bindings::refcounted::Trusted;
+use dom::bindings::reflector::{Reflectable, reflect_dom_object};
 use dom::bindings::str::DOMString;
 use dom::event::Event;
 use dom::eventtarget::EventTarget;
@@ -25,25 +25,25 @@ use dom::globalscope::GlobalScope;
 use dom::promise::Promise;
 use dom::vrdisplaycapabilities::VRDisplayCapabilities;
 use dom::vrdisplayevent::VRDisplayEvent;
-use dom::vrstageparameters::VRStageParameters;
 use dom::vreyeparameters::VREyeParameters;
 use dom::vrframedata::VRFrameData;
 use dom::vrpose::VRPose;
+use dom::vrstageparameters::VRStageParameters;
 use dom::webglrenderingcontext::WebGLRenderingContext;
-use js::jsapi::JSContext;
 use ipc_channel::ipc;
 use ipc_channel::ipc::{IpcSender, IpcReceiver};
-use util::thread::spawn_named;
+use js::jsapi::JSContext;
+use script_runtime::CommonScriptMsg;
+use script_runtime::ScriptThreadEventCategory::WebVREvent;
+use script_thread::Runnable;
 use std::boxed::FnBox;
 use std::cell::Cell;
 use std::mem;
 use std::rc::Rc;
 use std::sync::mpsc;
-use script_runtime::CommonScriptMsg;
-use script_runtime::ScriptThreadEventCategory::WebVREvent;
-use script_thread::Runnable;
-use vr_traits::webvr;
+use util::thread::spawn_named;
 use vr_traits::WebVRMsg;
+use vr_traits::webvr;
 use webrender_traits::VRCompositorCommand;
 
 #[dom_struct]
@@ -71,7 +71,7 @@ pub struct VRDisplay {
     // Compositor VRFrameData synchonization
     frame_data_status: Cell<VRFrameDataStatus>,
     #[ignore_heap_size_of = "channels are hard"]
-    frame_data_receiver: DOMRefCell<Option<IpcReceiver<Result<Vec<u8>,()>>>>
+    frame_data_receiver: DOMRefCell<Option<IpcReceiver<Result<Vec<u8>, ()>>>>
 }
 
 // Wrappers to include WebVR structs in a DOM struct
@@ -97,9 +97,7 @@ enum VRFrameDataStatus {
 no_jsmanaged_fields!(VRFrameDataStatus);
 
 impl VRDisplay {
-
     fn new_inherited(global: &GlobalScope, display:&webvr::VRDisplayData) -> VRDisplay {
-
         let stage = match display.stage_parameters {
             Some(ref params) => Some(VRStageParameters::new(&params, &global)),
             None => None
@@ -141,23 +139,27 @@ impl Drop for VRDisplay {
 }
 
 impl VRDisplayMethods for VRDisplay {
-
+    // https://w3c.github.io/webvr/#dom-vrdisplay-isconnected
     fn IsConnected(&self) -> bool {
         self.display.borrow().0.connected
     }
 
+    // https://w3c.github.io/webvr/#dom-vrdisplay-ispresenting
     fn IsPresenting(&self) -> bool {
         self.presenting.get()
     }
 
+    // https://w3c.github.io/webvr/#dom-vrdisplay-capabilities
     fn Capabilities(&self) -> Root<VRDisplayCapabilities> {
         Root::from_ref(&*self.capabilities.get())
     }
 
+    // https://w3c.github.io/webvr/#dom-vrdisplay-stageparameters
     fn GetStageParameters(&self) -> Option<Root<VRStageParameters>> {
         self.stage_params.get().map(|s| Root::from_ref(&*s))
     }
 
+    // https://w3c.github.io/webvr/#dom-vrdisplay-geteyeparameters
     fn GetEyeParameters(&self, eye: VREye) -> Root<VREyeParameters> {
         match eye {
             VREye::Left => Root::from_ref(&*self.left_eye_params.get()),
@@ -165,14 +167,17 @@ impl VRDisplayMethods for VRDisplay {
         }
     }
 
+    // https://w3c.github.io/webvr/#dom-vrdisplay-displayid
     fn DisplayId(&self) -> u32 {
         self.display.borrow().0.display_id as u32
     }
 
+    // https://w3c.github.io/webvr/#dom-vrdisplay-displayname
     fn DisplayName(&self) -> DOMString {
         DOMString::from(self.display.borrow().0.display_name.clone())
     }
 
+    // https://w3c.github.io/webvr/#dom-vrdisplay-getframedata-framedata-framedata
     fn GetFrameData(&self, frameData: &VRFrameData) -> bool {
         // If presenting we use a synced data with compositor for the whole frame
         if self.presenting.get() {
@@ -206,15 +211,17 @@ impl VRDisplayMethods for VRDisplay {
         false
     }
 
+    // https://w3c.github.io/webvr/#dom-vrdisplay-getpose
     fn GetPose(&self) -> Root<VRPose> {
         VRPose::new(&self.global(), &self.frame_data.borrow().0.pose)
     }
 
+    // https://w3c.github.io/webvr/#dom-vrdisplay-resetpose
     fn ResetPose(&self) -> () {
         if let Some(wevbr_sender) = self.webvr_thread() {
             let (sender, receiver) = ipc::channel().unwrap();
             wevbr_sender.send(WebVRMsg::ResetPose(self.global().pipeline_id(),
-                                                  self.get_display_id(), 
+                                                  self.get_display_id(),
                                                   sender)).unwrap();
             if let Ok(data) = receiver.recv().unwrap() {
                 // Some VRDisplay data might change after calling ResetPose()
@@ -223,22 +230,27 @@ impl VRDisplayMethods for VRDisplay {
         }
     }
 
+    // https://w3c.github.io/webvr/#dom-vrdisplay-depthnear
     fn DepthNear(&self) -> Finite<f64> {
         Finite::wrap(self.depth_near.get())
     }
 
+    // https://w3c.github.io/webvr/#dom-vrdisplay-depthnear
     fn SetDepthNear(&self, value: Finite<f64>) -> () {
         self.depth_near.set(*value.deref());
     }
 
+    // https://w3c.github.io/webvr/#dom-vrdisplay-depthfar
     fn DepthFar(&self) -> Finite<f64> {
         Finite::wrap(self.depth_far.get())
     }
 
+    // https://w3c.github.io/webvr/#dom-vrdisplay-depthfar
     fn SetDepthFar(&self, value: Finite<f64>) -> () {
         self.depth_far.set(*value.deref());
     }
 
+    // https://w3c.github.io/webvr/#dom-vrdisplay-requestanimationframe
     fn RequestAnimationFrame(&self, callback: Rc<FrameRequestCallback>) -> u32 {
         if self.presenting.get() {
             let raf_id = self.next_raf_id.get();
@@ -247,12 +259,15 @@ impl VRDisplayMethods for VRDisplay {
                 let _ = callback.Call__(Finite::wrap(now), ExceptionHandling::Report);
             };
             self.raf_callback_list.borrow_mut().push((raf_id, Some(Box::new(callback))));
-            raf_id 
+            raf_id
         } else {
+            // WebVR spec: When a VRDisplay is not presenting it should
+            // fallback to window.requestAnimationFrame.
             self.global().as_window().RequestAnimationFrame(callback)
         }
     }
 
+    // https://w3c.github.io/webvr/#dom-vrdisplay-cancelanimationframe
     fn CancelAnimationFrame(&self, handle: u32) -> () {
         if self.presenting.get() {
             let mut list = self.raf_callback_list.borrow_mut();
@@ -260,11 +275,14 @@ impl VRDisplayMethods for VRDisplay {
                 pair.1 = None;
             }
         } else {
+            // WebVR spec: When a VRDisplay is not presenting it should
+            // fallback to window.cancelAnimationFrame.
             self.global().as_window().CancelAnimationFrame(handle);
         }
     }
 
     #[allow(unrooted_must_root)]
+    // https://w3c.github.io/webvr/#dom-vrdisplay-requestpresent
     fn RequestPresent(&self, layers: Vec<VRLayer>) -> Rc<Promise> {
         let promise = Promise::new(&self.global());
         // TODO: WebVR spec: this method must be called in response to a user gesture
@@ -277,8 +295,8 @@ impl VRDisplayMethods for VRDisplay {
         }
 
         // Current WebVRSpec only allows 1 VRLayer if the VRDevice can present.
-        // Future revisions of this spec may allow multiple layers to enable more complex rendering effects 
-        // such as compositing WebGL and DOM elements together. 
+        // Future revisions of this spec may allow multiple layers to enable more complex rendering effects
+        // such as compositing WebGL and DOM elements together.
         // That functionality is not allowed by this revision of the spec.
         if layers.len() != 1 {
             let msg = "The number of layers must be 1".to_string();
@@ -304,7 +322,7 @@ impl VRDisplayMethods for VRDisplay {
             promise.resolve_native(promise.global().get_cx(), &());
             return promise;
         }
-        
+
         // Request Present
         if let Some(wevbr_sender) = self.webvr_thread() {
             let (sender, receiver) = ipc::channel().unwrap();
@@ -332,6 +350,7 @@ impl VRDisplayMethods for VRDisplay {
     }
 
     #[allow(unrooted_must_root)]
+    // https://w3c.github.io/webvr/#dom-vrdisplay-exitpresent
     fn ExitPresent(&self) -> Rc<Promise> {
         let promise = Promise::new(&self.global());
 
@@ -366,6 +385,7 @@ impl VRDisplayMethods for VRDisplay {
         promise
     }
 
+    // https://w3c.github.io/webvr/#dom-vrdisplay-submitframe
     fn SubmitFrame(&self) -> () {
         if !self.presenting.get() {
             warn!("VRDisplay not presenting");
@@ -381,7 +401,6 @@ impl VRDisplayMethods for VRDisplay {
 }
 
 impl VRDisplay {
-
     fn webvr_thread(&self) -> Option<IpcSender<WebVRMsg>> {
         self.global().as_window().webvr_thread()
     }
@@ -443,7 +462,7 @@ impl VRDisplay {
         self.presenting.set(true);
         let (sync_sender, sync_receiver) = ipc::channel().unwrap();
         *self.frame_data_receiver.borrow_mut() = Some(sync_receiver);
-        
+
         let display_id = self.display.borrow().0.display_id;
         let api_sender = self.layer_ctx.get().unwrap().ipc_renderer();
         let js_sender = self.global().script_chan();
@@ -519,7 +538,7 @@ impl VRDisplay {
         } else {
             VRFrameDataStatus::Exit
         };
- 
+
         self.frame_data_status.set(status);
     }
 
@@ -555,7 +574,7 @@ impl VRDisplay {
 
 struct NotifyDisplayRAF {
     address: Trusted<VRDisplay>,
-    sender: mpsc::Sender<Result<(f64, f64),()>>
+    sender: mpsc::Sender<Result<(f64, f64), ()>>
 }
 
 impl Runnable for NotifyDisplayRAF {
@@ -575,7 +594,7 @@ fn parse_bounds(src: &Option<Vec<Finite<f32>>>, dst: &mut [f32; 4]) -> Result<()
         Some(ref values) => {
             if values.len() == 0 {
                 return Ok(())
-            } 
+            }
             if values.len() > 4 {
                 return Err("The number of values in the leftBounds/rightBounds arrays must be 0 or 4")
             }
@@ -588,7 +607,9 @@ fn parse_bounds(src: &Option<Vec<Finite<f32>>>, dst: &mut [f32; 4]) -> Result<()
     }
 }
 
-fn validate_layer(cx: *mut JSContext, layer: &VRLayer) -> Result<(WebVRLayer, Root<WebGLRenderingContext>), &'static str> {
+fn validate_layer(cx: *mut JSContext,
+                  layer: &VRLayer)
+                  -> Result<(WebVRLayer, Root<WebGLRenderingContext>), &'static str> {
     let ctx = layer.source.as_ref().map(|ref s| s.get_or_init_webgl_context(cx, None)).unwrap_or(None);
     if let Some(ctx) = ctx {
         let mut data = webvr::VRLayer::default();

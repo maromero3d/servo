@@ -14,6 +14,6 @@ ipc-channel = "0.5"
 msg = {path = "../msg"}
 serde = "0.8"
 serde_derive = "0.8"
-webvr = {path = "C:\\Users\\mortimer\\Projects\\rust-webvr", features = ["serde-serialization"] }
+rust-webvr = {version = "0.1", features = ["serde-serialization"] }
 
 

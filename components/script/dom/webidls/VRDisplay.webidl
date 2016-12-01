@@ -105,7 +105,8 @@ interface VRDisplay : EventTarget {
   /**
    * Begin presenting to the VRDisplay. Must be called in response to a user gesture.
    * Repeat calls while already presenting will update the VRLayers being displayed.
-   * If the number of values in the leftBounds/rightBounds arrays is not 0 or 4 for any of the passed layers the promise is rejected
+   * If the number of values in the leftBounds/rightBounds arrays is not 0 or 4 for
+   * any of the passed layers the promise is rejected.
    * If the source of any of the layers is not present (null), the promise is rejected.
    */
   Promise<void> requestPresent(sequence<VRLayer> layers);
