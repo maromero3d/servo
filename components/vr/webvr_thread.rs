@@ -90,6 +90,12 @@ impl WebVRThread {
                 WebVRMsg::CreateCompositor(device_id) => {
                     self.handle_create_compositor(device_id);
                 },
+                WebVRMsg::GetGamepads(sender) => {
+                    self.handle_get_gamepads(sender);
+                },
+                WebVRMsg::UpdateGamepads() => {
+                    self.handle_update_gamepads();
+                },
                 WebVRMsg::Exit => {
                     break
                 },
@@ -174,6 +180,7 @@ impl WebVRThread {
         match self.access_check(pipeline, device_id).map(|d| d.clone()) {
             Ok(device) => {
                 self.presenting.remove(&device_id);
+                device.borrow_mut().stop_present();
                 if let Some(sender) = sender {
                     sender.send(Ok(())).unwrap();
                 }
@@ -191,6 +198,32 @@ impl WebVRThread {
     fn handle_create_compositor(&mut self, device_id: u64) {
         let compositor = self.service.get_device(device_id).map(|d| WebVRCompositor(d.as_ptr()));
         self.vr_compositor_chan.send(compositor).unwrap();
+    }
+
+    fn handle_get_gamepads(&mut self, sender: IpcSender<WebVRResult<Vec<(u64, String, VRGamepadState)>>>) {
+        let gamepads = self.service.get_gamepads();
+        let mut data = Vec::new();
+        for gamepad in gamepads {
+            let gamepad = gamepad.borrow();
+            data.push((gamepad.id(), gamepad.name(), gamepad.state()));
+        }
+        sender.send(Ok(data)).unwrap();
+    }
+
+    fn handle_update_gamepads(&mut self) {
+        let gamepads = self.service.get_gamepads();
+        if gamepads.len() == 0 {
+            return;
+        }
+
+        let mut data = Vec::new();
+        for gamepad in gamepads {
+            let gamepad = gamepad.borrow();
+            data.push((gamepad.id(), gamepad.state()));
+        }
+        let pipeline_ids: Vec<PipelineId> = self.contexts.iter().map(|c| *c).collect();
+        let event = WebVREventMsg::GamepadUpdate(data);
+        self.constellation_chan.send(ConstellationMsg::WebVREvent(pipeline_ids.clone(), event)).unwrap();
     }
 
     fn poll_events(&mut self, sender: IpcSender<bool>) {
@@ -297,6 +330,11 @@ impl webrender_traits::VRCompositorHandler for WebVRCompositorHandler {
                         }
                     }
                 }
+
+                // update gamepads
+                //if let Some(ref sender) = self.webvr_thread_sender {
+                //    sender.send(WebVRMsg::UpdateGamepads()).unwrap();
+                //}
             }
             webrender_traits::VRCompositorCommand::Release(compositor_id) => {
                 self.compositors.remove(&compositor_id);

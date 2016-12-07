@@ -56,6 +56,7 @@ impl VRStageParameters {
 }
 
 impl VRStageParametersMethods for VRStageParameters {
+    #[allow(unsafe_code)]
     // https://w3c.github.io/webvr/#dom-vrstageparameters-sittingtostandingtransform
     unsafe fn SittingToStandingTransform(&self, _cx: *mut JSContext) -> NonZero<*mut JSObject> {
         NonZero::new(self.transform.get())

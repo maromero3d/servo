@@ -8,6 +8,7 @@ use dom::bindings::js::{JS, MutNullableHeap, Root};
 use dom::bindings::reflector::{Reflector, Reflectable, reflect_dom_object};
 use dom::bindings::str::DOMString;
 use dom::bluetooth::Bluetooth;
+use dom::gamepadlist::GamepadList;
 use dom::mimetypearray::MimeTypeArray;
 use dom::navigatorinfo;
 use dom::pluginarray::PluginArray;
@@ -23,7 +24,8 @@ pub struct Navigator {
     plugins: MutNullableHeap<JS<PluginArray>>,
     mime_types: MutNullableHeap<JS<MimeTypeArray>>,
     service_worker: MutNullableHeap<JS<ServiceWorkerContainer>>,
-    vr: MutNullableHeap<JS<VR>>
+    vr: MutNullableHeap<JS<VR>>,
+    gamepads: MutNullableHeap<JS<GamepadList>>
 }
 
 impl Navigator {
@@ -35,6 +37,7 @@ impl Navigator {
             mime_types: Default::default(),
             service_worker: Default::default(),
             vr: Default::default(),
+            gamepads: Default::default()
         }
     }
 
@@ -124,6 +127,18 @@ impl NavigatorMethods for Navigator {
         self.vr.or_init(|| VR::new(&self.global()))
     }
 
+    // https://www.w3.org/TR/gamepad/#navigator-interface-extension
+    fn GetGamepads(&self) -> Root<GamepadList> {
+        let root = self.gamepads.or_init(|| {
+            GamepadList::new(&self.global(), Vec::new())
+        });
+
+        let vr_gamepads = self.Vr().get_gamepads();
+        root.sync(&vr_gamepads);
+        // TODO: Add no VR related gamepads
+        
+        root
+    }
 }
 
 impl Navigator {

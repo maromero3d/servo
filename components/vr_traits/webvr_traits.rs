@@ -19,5 +19,7 @@ pub enum WebVRMsg {
     RequestPresent(PipelineId, u64, IpcSender<WebVRResult<()>>),
     ExitPresent(PipelineId, u64, Option<IpcSender<WebVRResult<()>>>),
     CreateCompositor(u64),
+    GetGamepads(IpcSender<WebVRResult<Vec<(u64, String, VRGamepadState)>>>),
+    UpdateGamepads(),
     Exit,
 }

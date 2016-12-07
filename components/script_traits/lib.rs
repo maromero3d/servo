@@ -71,7 +71,7 @@ use std::fmt;
 use std::sync::mpsc::{Receiver, Sender};
 use style_traits::{PagePx, UnsafeNode, ViewportPx};
 use vr_traits::WebVRMsg;
-use vr_traits::webvr::VRDisplayEvent;
+use vr_traits::webvr::{VRDisplayEvent, VRGamepadState};
 use webdriver_msg::{LoadStatus, WebDriverScriptCommand};
 
 pub use script_msg::{LayoutMsg, ScriptMsg, EventResult, LogEntry};
@@ -722,7 +722,9 @@ pub enum ConstellationMsg {
 #[derive(Deserialize, Serialize, Clone)]
 pub enum WebVREventMsg {
     /// Inform the constellation of a VR display event.
-    DisplayEvent(VRDisplayEvent)
+    DisplayEvent(VRDisplayEvent),
+    /// Inform the constellation of a VR Gamepad update.
+    GamepadUpdate(Vec<(u64, VRGamepadState)>)
 }
 
 /// Resources required by workerglobalscopes

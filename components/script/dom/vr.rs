@@ -11,6 +11,7 @@ use dom::bindings::js::{JS, Root};
 use dom::bindings::reflector::{Reflectable, reflect_dom_object};
 use dom::event::Event;
 use dom::eventtarget::EventTarget;
+use dom::gamepad::Gamepad;
 use dom::globalscope::GlobalScope;
 use dom::promise::Promise;
 use dom::vrdisplay::VRDisplay;
@@ -25,14 +26,16 @@ use vr_traits::webvr;
 #[dom_struct]
 pub struct VR {
     eventtarget: EventTarget,
-    displays: DOMRefCell<Vec<JS<VRDisplay>>>
+    displays: DOMRefCell<Vec<JS<VRDisplay>>>,
+    gamepads: DOMRefCell<Vec<JS<Gamepad>>>
 }
 
 impl VR {
     fn new_inherited() -> VR {
         VR {
             eventtarget: EventTarget::new_inherited(),
-            displays: DOMRefCell::new(Vec::new())
+            displays: DOMRefCell::new(Vec::new()),
+            gamepads: DOMRefCell::new(Vec::new()),
         }
     }
 
@@ -133,33 +136,40 @@ impl VR {
     }
 
     pub fn handle_webvr_event(&self, event: WebVREventMsg) {
-        let event = match event {
-            WebVREventMsg::DisplayEvent(display_event) => display_event
-        };
-
-        match &event {
-            &webvr::VRDisplayEvent::Connect(ref display) => {
-                self.sync_display(&display);
-                if let Some(display) = self.find_display(display.display_id) {
-                    display.handle_webvr_event(&event);
-                    self.notify_event(&display, &event);
-                }
+        match event {
+            WebVREventMsg::DisplayEvent(event) => {
+                match &event {
+                    &webvr::VRDisplayEvent::Connect(ref display) => {
+                        self.sync_display(&display);
+                        if let Some(display) = self.find_display(display.display_id) {
+                            display.handle_webvr_event(&event);
+                            self.notify_event(&display, &event);
+                        }
+                    },
+                    &webvr::VRDisplayEvent::Disconnect(id) => {
+                        if let Some(display) = self.find_display(id) {
+                            display.handle_webvr_event(&event);
+                            self.notify_event(&display, &event);
+                        }
+                    },
+                    &webvr::VRDisplayEvent::Activate(ref display, _) |
+                    &webvr::VRDisplayEvent::Deactivate(ref display, _) |
+                    &webvr::VRDisplayEvent::Blur(ref display) |
+                    &webvr::VRDisplayEvent::Focus(ref display) |
+                    &webvr::VRDisplayEvent::PresentChange(ref display, _) |
+                    &webvr::VRDisplayEvent::Change(ref display) => {
+                        self.sync_display(&display);
+                        if let Some(display) = self.find_display(display.display_id) {
+                            display.handle_webvr_event(&event);
+                        }
+                    }
+                };
             },
-            &webvr::VRDisplayEvent::Disconnect(id) => {
-                if let Some(display) = self.find_display(id) {
-                    display.handle_webvr_event(&event);
-                    self.notify_event(&display, &event);
-                }
-            },
-            &webvr::VRDisplayEvent::Activate(ref display, _) |
-            &webvr::VRDisplayEvent::Deactivate(ref display, _) |
-            &webvr::VRDisplayEvent::Blur(ref display) |
-            &webvr::VRDisplayEvent::Focus(ref display) |
-            &webvr::VRDisplayEvent::PresentChange(ref display, _) |
-            &webvr::VRDisplayEvent::Change(ref display) => {
-                self.sync_display(&display);
-                if let Some(display) = self.find_display(display.display_id) {
-                    display.handle_webvr_event(&event);
+            WebVREventMsg::GamepadUpdate(updates) => {
+                for update in &updates {
+                    if let Some(gamepad) = self.find_gamepad(update.0) {
+                        gamepad.update_from_vr(&update.1);
+                    }
                 }
             }
         };
@@ -168,6 +178,48 @@ impl VR {
     fn notify_event(&self, display: &VRDisplay, event: &webvr::VRDisplayEvent) {
         let event = VRDisplayEvent::new_from_webvr(&self.global(), &display, &event);
         event.upcast::<Event>().fire(self.upcast());
+    }
+}
+
+// Gamepad
+impl VR {
+    fn find_gamepad(&self, gamepad_id: u64) -> Option<Root<Gamepad>> {
+        self.gamepads.borrow()
+                     .iter()
+                     .find(|g| g.gamepad_id() == gamepad_id)
+                     .map(|g| Root::from_ref(&**g))
+    }
+
+    fn sync_gamepad(&self, id: u64, state: &webvr::VRGamepadState) {
+        if let Some(existing) = self.find_gamepad(id) {
+            existing.update_from_vr(&state);
+        } else {
+            let root = Gamepad::new_from_vr(&self.global(), id, &state);
+            self.gamepads.borrow_mut().push(JS::from_ref(&*root));
+        }
+    }
+
+    pub fn get_gamepads(&self) -> Vec<Root<Gamepad>> {
+        //if self.gamepads.borrow().len() == 0 {
+            if let Some(wevbr_sender) = self.webvr_thread() {
+                let (sender, receiver) = ipc::channel().unwrap();
+                wevbr_sender.send(WebVRMsg::GetGamepads(sender)).unwrap();
+                match receiver.recv().unwrap() {
+                    Ok(gamepads) => {
+                        // Sync displays
+                        for gamepad in gamepads {
+                            self.sync_gamepad(gamepad.0, &gamepad.2);
+                        }
+                    },
+                    Err(_) => {}
+                }
+            }
+        //}
+
+        self.gamepads.borrow().iter()
+                              .map(|g| Root::from_ref(&**g))
+                              .collect()
+
     }
 }
 

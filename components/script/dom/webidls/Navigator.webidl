@@ -62,3 +62,8 @@ interface NavigatorCookies {
 partial interface Navigator {
   readonly attribute VR vr;
 };
+
+// https://www.w3.org/TR/gamepad/#navigator-interface-extension
+partial interface Navigator {
+    GamepadList getGamepads();
+};
