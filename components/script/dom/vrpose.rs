@@ -79,7 +79,7 @@ impl VRPose {
                            global,
                            VRPoseBinding::Wrap);
         root.update(&pose);
-        root 
+        root
     }
 
     pub fn update(&self, pose: &webvr::VRPose) {
