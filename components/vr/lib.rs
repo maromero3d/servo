@@ -12,7 +12,6 @@ extern crate ipc_channel;
 extern crate log;
 extern crate msg;
 extern crate script_traits;
-extern crate util;
 extern crate vr_traits;
 extern crate webrender_traits;
 

@@ -13,7 +13,6 @@ path = "lib.rs"
 ipc-channel = "0.5"
 log = "0.3"
 msg = {path = "../msg"}
-util = {path = "../util"}
 script_traits = {path = "../script_traits"}
 vr_traits = {path = "../vr_traits" }
 

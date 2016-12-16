@@ -9,9 +9,10 @@ use dom::bindings::conversions::{slice_to_array_buffer_view, update_array_buffer
 use dom::bindings::error::Fallible;
 use dom::bindings::js::{JS, Root};
 use dom::bindings::num::Finite;
-use dom::bindings::reflector::{Reflector, reflect_dom_object};
+use dom::bindings::reflector::{DomObject, Reflector, reflect_dom_object};
 use dom::globalscope::GlobalScope;
 use dom::vrpose::VRPose;
+use dom::window::Window;
 use js::jsapi::{Heap, JSContext, JSObject};
 use std::cell::Cell;
 use vr_traits::webvr;
@@ -58,8 +59,8 @@ impl VRFrameData {
                     VRFrameDataBinding::Wrap)
     }
 
-    pub fn Constructor(global: &GlobalScope) -> Fallible<Root<VRFrameData>> {
-        Ok(VRFrameData::new(global))
+    pub fn Constructor(window: &Window) -> Fallible<Root<VRFrameData>> {
+        Ok(VRFrameData::new(&window.global()))
     }
 }
 

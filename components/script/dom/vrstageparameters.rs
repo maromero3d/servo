@@ -25,7 +25,7 @@ pub struct VRStageParameters {
 // Wrappers required to include WebVR structs in a DOM struct
 #[derive(Clone)]
 pub struct WebVRStageParameters(webvr::VRStageParameters);
-no_jsmanaged_fields!(WebVRStageParameters);
+unsafe_no_jsmanaged_fields!(WebVRStageParameters);
 
 impl VRStageParameters {
     #[allow(unrooted_must_root)]

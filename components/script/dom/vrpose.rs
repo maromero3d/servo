@@ -8,7 +8,7 @@ use dom::bindings::codegen::Bindings::VRPoseBinding;
 use dom::bindings::codegen::Bindings::VRPoseBinding::VRPoseMethods;
 use dom::bindings::conversions::{slice_to_array_buffer_view, update_array_buffer_view};
 use dom::bindings::js::Root;
-use dom::bindings::reflector::{Reflectable, Reflector, reflect_dom_object};
+use dom::bindings::reflector::{DomObject, Reflector, reflect_dom_object};
 use dom::globalscope::GlobalScope;
 use js::jsapi::{Heap, JSContext, JSObject};
 use std::ptr;
@@ -79,7 +79,7 @@ impl VRPose {
                            global,
                            VRPoseBinding::Wrap);
         root.update(&pose);
-        root        
+        root 
     }
 
     pub fn update(&self, pose: &webvr::VRPose) {

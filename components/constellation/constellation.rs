@@ -49,6 +49,9 @@ use script_traits::{LogEntry, ServiceWorkerMsg, webdriver_msg};
 use script_traits::{MozBrowserErrorType, MozBrowserEvent, WebDriverCommandMsg, WindowSizeData};
 use script_traits::{SWManagerMsg, ScopeThings, WindowSizeType};
 use script_traits::WebVREventMsg;
+use servo_config::opts;
+use servo_config::prefs::PREFS;
+use servo_remutex::ReentrantMutex;
 use servo_url::ServoUrl;
 use std::borrow::ToOwned;
 use std::collections::{HashMap, VecDeque};
@@ -1292,7 +1295,7 @@ impl<Message, LTF, STF> Constellation<Message, LTF, STF>
             match self.pipelines.get_mut(&id) {
                 Some(ref pipeline) => {
                     // Notify script thread
-                    pipeline.script_chan.send(ConstellationControlMsg::WebVREvent(id, event.clone())).unwrap();
+                    pipeline.event_loop.send(ConstellationControlMsg::WebVREvent(id, event.clone())).unwrap();
                 },
                 None => warn!("constellation got webvr event for dead pipeline")
             }

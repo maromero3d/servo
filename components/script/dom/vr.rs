@@ -8,7 +8,7 @@ use dom::bindings::codegen::Bindings::VRBinding::VRMethods;
 use dom::bindings::error::Error;
 use dom::bindings::inheritance::Castable;
 use dom::bindings::js::{JS, Root};
-use dom::bindings::reflector::{Reflectable, reflect_dom_object};
+use dom::bindings::reflector::{DomObject, reflect_dom_object};
 use dom::event::Event;
 use dom::eventtarget::EventTarget;
 use dom::globalscope::GlobalScope;

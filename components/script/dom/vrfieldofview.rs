@@ -21,7 +21,7 @@ pub struct VRFieldOfView {
 // Wrappers required to include WebVR structs in a DOM struct
 #[derive(Clone)]
 pub struct WebVRFieldOfView(webvr::VRFieldOfView);
-no_jsmanaged_fields!(WebVRFieldOfView);
+unsafe_no_jsmanaged_fields!(WebVRFieldOfView);
 
 impl VRFieldOfView {
     fn new_inherited(fov: &webvr::VRFieldOfView) -> VRFieldOfView {

@@ -20,7 +20,7 @@ pub struct VRDisplayCapabilities {
 // Wrappers required to include WebVR structs in a DOM struct
 #[derive(Clone)]
 pub struct WebVRDisplayCapabilities(webvr::VRDisplayCapabilities);
-no_jsmanaged_fields!(WebVRDisplayCapabilities);
+unsafe_no_jsmanaged_fields!(WebVRDisplayCapabilities);
 
 impl VRDisplayCapabilities {
     fn new_inherited(capabilities:&webvr::VRDisplayCapabilities) -> VRDisplayCapabilities {

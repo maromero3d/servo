@@ -27,7 +27,7 @@ pub struct VREyeParameters {
 // Wrappers required to include WebVR structs in a DOM struct
 #[derive(Clone)]
 pub struct WebVREyeParameters(webvr::VREyeParameters);
-no_jsmanaged_fields!(WebVREyeParameters);
+unsafe_no_jsmanaged_fields!(WebVREyeParameters);
 
 impl VREyeParameters {
     #[allow(unrooted_must_root)]

@@ -14,10 +14,10 @@ use dom::bindings::codegen::Bindings::VRLayerBinding::VRLayer;
 use dom::bindings::codegen::Bindings::WindowBinding::FrameRequestCallback;
 use dom::bindings::codegen::Bindings::WindowBinding::WindowBinding::WindowMethods;
 use dom::bindings::inheritance::Castable;
-use dom::bindings::js::{JS, MutNullableHeap, MutHeap, Root};
+use dom::bindings::js::{MutNullableJS, MutJS, Root};
 use dom::bindings::num::Finite;
 use dom::bindings::refcounted::Trusted;
-use dom::bindings::reflector::{Reflectable, reflect_dom_object};
+use dom::bindings::reflector::{DomObject, reflect_dom_object};
 use dom::bindings::str::DOMString;
 use dom::event::Event;
 use dom::eventtarget::EventTarget;
@@ -36,12 +36,11 @@ use js::jsapi::JSContext;
 use script_runtime::CommonScriptMsg;
 use script_runtime::ScriptThreadEventCategory::WebVREvent;
 use script_thread::Runnable;
-use std::boxed::FnBox;
 use std::cell::Cell;
 use std::mem;
 use std::rc::Rc;
 use std::sync::mpsc;
-use util::thread::spawn_named;
+use std::thread;
 use vr_traits::WebVRMsg;
 use vr_traits::webvr;
 use webrender_traits::VRCompositorCommand;
@@ -54,20 +53,20 @@ pub struct VRDisplay {
     depth_near: Cell<f64>,
     depth_far: Cell<f64>,
     presenting: Cell<bool>,
-    left_eye_params: MutHeap<JS<VREyeParameters>>,
-    right_eye_params: MutHeap<JS<VREyeParameters>>,
-    capabilities: MutHeap<JS<VRDisplayCapabilities>>,
-    stage_params: MutNullableHeap<JS<VRStageParameters>>,
+    left_eye_params: MutJS<VREyeParameters>,
+    right_eye_params: MutJS<VREyeParameters>,
+    capabilities: MutJS<VRDisplayCapabilities>,
+    stage_params: MutNullableJS<VRStageParameters>,
     #[ignore_heap_size_of = "Defined in rust-webvr"]
     frame_data: DOMRefCell<WebVRFrameData>,
     #[ignore_heap_size_of = "Defined in rust-webvr"]
     layer: DOMRefCell<WebVRLayer>,
-    layer_ctx: MutNullableHeap<JS<WebGLRenderingContext>>,
+    layer_ctx: MutNullableJS<WebGLRenderingContext>,
     #[ignore_heap_size_of = "Defined in rust-webvr"]
     next_raf_id: Cell<u32>,
     /// List of request animation frame callbacks
     #[ignore_heap_size_of = "closures are hard"]
-    raf_callback_list: DOMRefCell<Vec<(u32, Option<Box<FnBox(f64)>>)>>,
+    raf_callback_list: DOMRefCell<Vec<(u32, Option<Rc<FrameRequestCallback>>)>>,
     // Compositor VRFrameData synchonization
     frame_data_status: Cell<VRFrameDataStatus>,
     #[ignore_heap_size_of = "channels are hard"]
@@ -77,15 +76,15 @@ pub struct VRDisplay {
 // Wrappers to include WebVR structs in a DOM struct
 #[derive(Clone)]
 pub struct WebVRDisplayData(webvr::VRDisplayData);
-no_jsmanaged_fields!(WebVRDisplayData);
+unsafe_no_jsmanaged_fields!(WebVRDisplayData);
 
 #[derive(Clone, Default)]
 pub struct WebVRFrameData(webvr::VRFrameData);
-no_jsmanaged_fields!(WebVRFrameData);
+unsafe_no_jsmanaged_fields!(WebVRFrameData);
 
 #[derive(Clone, Default)]
 pub struct WebVRLayer(webvr::VRLayer);
-no_jsmanaged_fields!(WebVRLayer);
+unsafe_no_jsmanaged_fields!(WebVRLayer);
 
 #[derive(Clone, Copy, PartialEq, Eq, HeapSizeOf)]
 enum VRFrameDataStatus {
@@ -94,7 +93,7 @@ enum VRFrameDataStatus {
     Exit
 }
 
-no_jsmanaged_fields!(VRFrameDataStatus);
+unsafe_no_jsmanaged_fields!(VRFrameDataStatus);
 
 impl VRDisplay {
     fn new_inherited(global: &GlobalScope, display:&webvr::VRDisplayData) -> VRDisplay {
@@ -109,13 +108,13 @@ impl VRDisplay {
             depth_near: Cell::new(0.01),
             depth_far: Cell::new(10000.0),
             presenting: Cell::new(false),
-            left_eye_params: MutHeap::new(&*VREyeParameters::new(&display.left_eye_parameters, &global)),
-            right_eye_params: MutHeap::new(&*VREyeParameters::new(&display.right_eye_parameters, &global)),
-            capabilities: MutHeap::new(&*VRDisplayCapabilities::new(&display.capabilities, &global)),
-            stage_params: MutNullableHeap::new(stage.as_ref().map(|v| v.deref())),
+            left_eye_params: MutJS::new(&*VREyeParameters::new(&display.left_eye_parameters, &global)),
+            right_eye_params: MutJS::new(&*VREyeParameters::new(&display.right_eye_parameters, &global)),
+            capabilities: MutJS::new(&*VRDisplayCapabilities::new(&display.capabilities, &global)),
+            stage_params: MutNullableJS::new(stage.as_ref().map(|v| v.deref())),
             frame_data: DOMRefCell::new(Default::default()),
             layer: DOMRefCell::new(Default::default()),
-            layer_ctx: MutNullableHeap::default(),
+            layer_ctx: MutNullableJS::default(),
             next_raf_id: Cell::new(1),
             raf_callback_list: DOMRefCell::new(vec![]),
             frame_data_status: Cell::new(VRFrameDataStatus::Waiting),
@@ -255,10 +254,7 @@ impl VRDisplayMethods for VRDisplay {
         if self.presenting.get() {
             let raf_id = self.next_raf_id.get();
             self.next_raf_id.set(raf_id + 1);
-            let callback = move |now: f64| {
-                let _ = callback.Call__(Finite::wrap(now), ExceptionHandling::Report);
-            };
-            self.raf_callback_list.borrow_mut().push((raf_id, Some(Box::new(callback))));
+            self.raf_callback_list.borrow_mut().push((raf_id, Some(callback)));
             raf_id
         } else {
             // WebVR spec: When a VRDisplay is not presenting it should
@@ -470,7 +466,7 @@ impl VRDisplay {
         let near_init = self.depth_near.get();
         let far_init = self.depth_far.get();
 
-        spawn_named("WebVR_RAF".into(), move || {
+        thread::Builder::new().name("WebVR_RAF".into()).spawn(move || {
             let (raf_sender, raf_receiver) = mpsc::channel();
             let mut near = near_init;
             let mut far = far_init;
@@ -499,7 +495,7 @@ impl VRDisplay {
                     return;
                 }
             }
-        });
+        }).expect("Thread spawning failed");
     }
 
     fn stop_present(&self) {
@@ -546,11 +542,11 @@ impl VRDisplay {
         self.frame_data_status.set(VRFrameDataStatus::Waiting);
 
         let mut callbacks = mem::replace(&mut *self.raf_callback_list.borrow_mut(), vec![]);
-        let timing = self.global().as_window().Performance().Now();
+        let now = self.global().as_window().Performance().Now();
 
         for (_, callback) in callbacks.drain(..) {
             if let Some(callback) = callback {
-                callback(*timing);
+                let _ = callback.Call__(Finite::wrap(*now), ExceptionHandling::Report);
             }
         }
 

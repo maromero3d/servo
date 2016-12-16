@@ -10,11 +10,13 @@ use std::{thread, time};
 use std::collections::{HashMap, HashSet};
 use std::sync::mpsc;
 use std::sync::mpsc::{Receiver, Sender};
-use util::thread::spawn_named;
 use vr_traits::{WebVRMsg, WebVRResult};
 use vr_traits::webvr::*;
 use webrender_traits;
 
+// WebVRThread owns native VRDevices, handles their life cycle inside Servo and
+// acts a doorman for untrusted VR requests from DOM Objects.
+// It waits for VR Commands from DOM objects and handles them in its trusted thread.
 pub struct WebVRThread {
     receiver: IpcReceiver<WebVRMsg>,
     sender: IpcSender<WebVRMsg>,
@@ -51,9 +53,9 @@ impl WebVRThread {
                  -> IpcSender<WebVRMsg> {
         let (sender, receiver) = ipc::channel().unwrap();
         let sender_clone = sender.clone();
-        spawn_named("WebVRThread".into(), move || {
+        thread::Builder::new().name("WebVRThread".into()).spawn(move || {
             WebVRThread::new(receiver, sender_clone, constellation_chan, vr_compositor_chan).start();
-        });
+        }).expect("Thread spawning failed");
         sender
     }
 
@@ -219,7 +221,8 @@ impl WebVRThread {
             self.polling_events = true;
             let webvr_thread = self.sender.clone();
             let (sender, receiver) = ipc::channel().unwrap();
-            spawn_named("WebVRPollEvents".into(), move || {
+
+            thread::Builder::new().name("WebVRPollEvents".into()).spawn(move || {
                 loop {
                     if webvr_thread.send(WebVRMsg::PollEvents(sender.clone())).is_err() {
                         // WebVR Thread closed
@@ -231,7 +234,7 @@ impl WebVRThread {
                     }
                     thread::sleep(time::Duration::from_millis(500));
                 }
-            });
+            }).expect("Thread spawning failed");
         }
     }
 }

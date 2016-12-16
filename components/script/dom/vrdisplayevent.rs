@@ -9,11 +9,12 @@ use dom::bindings::codegen::Bindings::VRDisplayEventBinding::VRDisplayEventReaso
 use dom::bindings::error::Fallible;
 use dom::bindings::inheritance::Castable;
 use dom::bindings::js::{JS, Root};
-use dom::bindings::reflector::reflect_dom_object;
+use dom::bindings::reflector::{DomObject, reflect_dom_object};
 use dom::bindings::str::DOMString;
 use dom::event::Event;
 use dom::globalscope::GlobalScope;
 use dom::vrdisplay::VRDisplay;
+use dom::window::Window;
 use servo_atoms::Atom;
 use vr_traits::webvr;
 
@@ -84,11 +85,11 @@ impl VRDisplayEvent {
                             &reason)
     }
 
-    pub fn Constructor(global: &GlobalScope,
+    pub fn Constructor(window: &Window,
                        type_: DOMString,
                        init: &VRDisplayEventBinding::VRDisplayEventInit)
                        -> Fallible<Root<VRDisplayEvent>> {
-        Ok(VRDisplayEvent::new(global,
+        Ok(VRDisplayEvent::new(&window.global(),
                             Atom::from(type_),
                             init.parent.bubbles,
                             init.parent.cancelable,

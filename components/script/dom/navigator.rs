@@ -23,7 +23,7 @@ pub struct Navigator {
     plugins: MutNullableJS<PluginArray>,
     mime_types: MutNullableJS<MimeTypeArray>,
     service_worker: MutNullableJS<ServiceWorkerContainer>,
-    vr: MutNullableHeap<JS<VR>>
+    vr: MutNullableJS<VR>
 }
 
 impl Navigator {
