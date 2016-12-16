@@ -51,6 +51,7 @@ impl VREyeParameters {
 }
 
 impl VREyeParametersMethods for VREyeParameters {
+    #[allow(unsafe_code)]
     // https://w3c.github.io/webvr/#dom-vreyeparameters-offset
     unsafe fn Offset(&self, _cx: *mut JSContext) -> NonZero<*mut JSObject> {
         NonZero::new(self.offset.get())

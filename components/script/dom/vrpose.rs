@@ -8,7 +8,7 @@ use dom::bindings::codegen::Bindings::VRPoseBinding;
 use dom::bindings::codegen::Bindings::VRPoseBinding::VRPoseMethods;
 use dom::bindings::conversions::{slice_to_array_buffer_view, update_array_buffer_view};
 use dom::bindings::js::Root;
-use dom::bindings::reflector::{Reflector, reflect_dom_object};
+use dom::bindings::reflector::{Reflectable, Reflector, reflect_dom_object};
 use dom::globalscope::GlobalScope;
 use js::jsapi::{Heap, JSContext, JSObject};
 use std::ptr;
@@ -62,9 +62,8 @@ fn heap_to_option(heap: &DOMRefCell<Heap<*mut JSObject>>) -> Option<NonZero<*mut
 }
 
 impl VRPose {
-    #[allow(unrooted_must_root)]
-    fn new_inherited(global: &GlobalScope, pose: &webvr::VRPose) -> VRPose {
-        let result = VRPose {
+    fn new_inherited() -> VRPose {
+        VRPose {
             reflector_: Reflector::new(),
             position: DOMRefCell::new(Heap::default()),
             orientation: DOMRefCell::new(Heap::default()),
@@ -72,19 +71,19 @@ impl VRPose {
             angular_vel: DOMRefCell::new(Heap::default()),
             linear_acc: DOMRefCell::new(Heap::default()),
             angular_acc: DOMRefCell::new(Heap::default())
-        };
-        result.update(&global, &pose);
-        result
+        }
     }
 
     pub fn new(global: &GlobalScope, pose: &webvr::VRPose) -> Root<VRPose> {
-        reflect_dom_object(box VRPose::new_inherited(global, &pose),
+        let root = reflect_dom_object(box VRPose::new_inherited(),
                            global,
-                           VRPoseBinding::Wrap)
+                           VRPoseBinding::Wrap);
+        root.update(&pose);
+        root        
     }
 
-    pub fn update(&self, global: &GlobalScope, pose: &webvr::VRPose) {
-        let cx = global.get_cx();
+    pub fn update(&self, pose: &webvr::VRPose) {
+        let cx = self.global().get_cx();
         update_typed_array(cx, pose.position.as_ref().map(|v| &v[..]), &self.position);
         update_typed_array(cx, pose.orientation.as_ref().map(|v| &v[..]), &self.orientation);
         update_typed_array(cx, pose.linear_velocity.as_ref().map(|v| &v[..]), &self.linear_vel);
