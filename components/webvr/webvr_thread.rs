@@ -108,6 +108,12 @@ impl WebVRThread {
                 WebVRMsg::CreateCompositor(display_id) => {
                     self.handle_create_compositor(display_id);
                 },
+                WebVRMsg::GetGamepads(sender) => {
+                    self.handle_get_gamepads(sender);
+                },
+                WebVRMsg::UpdateGamepads() => {
+                    self.handle_update_gamepads();
+                },
                 WebVRMsg::Exit => {
                     break
                 },
@@ -216,6 +222,28 @@ impl WebVRThread {
         self.vr_compositor_chan.send(compositor).unwrap();
     }
 
+    fn handle_get_gamepads(&mut self, sender: IpcSender<WebVRResult<Vec<(u64, String, VRGamepadState)>>>) {
+        let gamepads = self.service.get_gamepads();
+        let data = gamepads.iter().map(|g| {let g = g.borrow(); (g.id(), g.name(), g.state())}).collect();
+        sender.send(Ok(data)).unwrap();
+    }
+
+    fn handle_update_gamepads(&mut self) {
+        let gamepads = self.service.get_gamepads();
+        if gamepads.len() == 0 {
+            return;
+        }
+
+        let mut data = Vec::new();
+        for gamepad in gamepads {
+            let gamepad = gamepad.borrow();
+            data.push((gamepad.id(), gamepad.state()));
+        }
+        let pipeline_ids: Vec<PipelineId> = self.contexts.iter().map(|c| *c).collect();
+        let event = WebVREventMsg::GamepadUpdate(data);
+        self.constellation_chan.send(ConstellationMsg::WebVREvent(pipeline_ids.clone(), event)).unwrap();
+    }
+    
     fn poll_events(&mut self, sender: IpcSender<bool>) {
         loop {
             let events = self.service.poll_events();

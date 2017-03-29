@@ -11,6 +11,7 @@ use dom::bindings::js::{JS, Root};
 use dom::bindings::reflector::{DomObject, reflect_dom_object};
 use dom::event::Event;
 use dom::eventtarget::EventTarget;
+use dom::gamepad::Gamepad;
 use dom::globalscope::GlobalScope;
 use dom::promise::Promise;
 use dom::vrdisplay::VRDisplay;
@@ -20,20 +21,21 @@ use ipc_channel::ipc;
 use ipc_channel::ipc::IpcSender;
 use script_traits::WebVREventMsg;
 use std::rc::Rc;
-use webvr_traits::WebVRMsg;
-use webvr_traits::webvr;
+use webvr_traits::*;
 
 #[dom_struct]
 pub struct VR {
     eventtarget: EventTarget,
-    displays: DOMRefCell<Vec<JS<VRDisplay>>>
+    displays: DOMRefCell<Vec<JS<VRDisplay>>>,
+    gamepads: DOMRefCell<Vec<JS<Gamepad>>>
 }
 
 impl VR {
     fn new_inherited() -> VR {
         VR {
             eventtarget: EventTarget::new_inherited(),
-            displays: DOMRefCell::new(Vec::new())
+            displays: DOMRefCell::new(Vec::new()),
+            gamepads: DOMRefCell::new(Vec::new()),
         }
     }
 
@@ -116,7 +118,7 @@ impl VR {
         }
     }
 
-    fn sync_display(&self, display: &webvr::VRDisplayData) -> Root<VRDisplay> {
+    fn sync_display(&self, display: &WebVRDisplayData) -> Root<VRDisplay> {
         if let Some(existing) = self.find_display(display.display_id) {
             existing.update_display(&display);
             existing
@@ -128,34 +130,91 @@ impl VR {
     }
 
     pub fn handle_webvr_event(&self, event: WebVREventMsg) {
-        let WebVREventMsg::DisplayEvent(event) = event;
-        match &event {
-            &webvr::VRDisplayEvent::Connect(ref display) => {
-                let display = self.sync_display(&display);
-                display.handle_webvr_event(&event);
-                self.notify_event(&display, &event);
+        match event {
+            WebVREventMsg::DisplayEvent(event) => {
+                match &event {
+                    &WebVRDisplayEvent::Connect(ref display) => {
+                        let display = self.sync_display(&display);
+                        display.handle_webvr_event(&event);
+                        self.notify_event(&display, &event);
+                    },
+                    &WebVRDisplayEvent::Disconnect(id) => {
+                        if let Some(display) = self.find_display(id) {
+                            display.handle_webvr_event(&event);
+                        self.notify_event(&display, &event);
+                        }
+                    },
+                    &WebVRDisplayEvent::Activate(ref display, _) |
+                    &WebVRDisplayEvent::Deactivate(ref display, _) |
+                    &WebVRDisplayEvent::Blur(ref display) |
+                    &WebVRDisplayEvent::Focus(ref display) |
+                    &WebVRDisplayEvent::PresentChange(ref display, _) |
+                    &WebVRDisplayEvent::Change(ref display) => {
+                        let display = self.sync_display(&display);
+                        display.handle_webvr_event(&event);
+                    }
+                };
             },
-            &webvr::VRDisplayEvent::Disconnect(id) => {
-                if let Some(display) = self.find_display(id) {
-                    display.handle_webvr_event(&event);
-                    self.notify_event(&display, &event);
+            WebVREventMsg::GamepadUpdate(updates) => {
+                for update in &updates {
+                    if let Some(gamepad) = self.find_gamepad(update.0) {
+                        gamepad.update_from_vr(&update.1);
+                    }
                 }
-            },
-            &webvr::VRDisplayEvent::Activate(ref display, _) |
-            &webvr::VRDisplayEvent::Deactivate(ref display, _) |
-            &webvr::VRDisplayEvent::Blur(ref display) |
-            &webvr::VRDisplayEvent::Focus(ref display) |
-            &webvr::VRDisplayEvent::PresentChange(ref display, _) |
-            &webvr::VRDisplayEvent::Change(ref display) => {
-                let display = self.sync_display(&display);
-                display.handle_webvr_event(&event);
             }
         };
     }
 
-    fn notify_event(&self, display: &VRDisplay, event: &webvr::VRDisplayEvent) {
+    fn notify_event(&self, display: &VRDisplay, event: &WebVRDisplayEvent) {
         let event = VRDisplayEvent::new_from_webvr(&self.global(), &display, &event);
         event.upcast::<Event>().fire(self.upcast());
+    }
+}
+
+// Gamepad
+impl VR {
+    fn find_gamepad(&self, gamepad_id: u64) -> Option<Root<Gamepad>> {
+        self.gamepads.borrow()
+                     .iter()
+                     .find(|g| g.gamepad_id() == gamepad_id)
+                     .map(|g| Root::from_ref(&**g))
+    }
+
+    fn sync_gamepad(&self, display_id: u64, name: String, state: &WebVRGamepadState) {
+        if let Some(existing) = self.find_gamepad(display_id) {
+            existing.update_from_vr(&state);
+        } else {
+            let index = self.gamepads.borrow().len();
+            let root = Gamepad::new_from_vr(&self.global(),
+                                            name,
+                                            display_id,
+                                            index as u32,
+                                            &state);
+            self.gamepads.borrow_mut().push(JS::from_ref(&*root));
+        }
+    }
+
+    pub fn get_gamepads(&self) -> Vec<Root<Gamepad>> {
+        //if self.gamepads.borrow().len() == 0 {
+        if let Some(wevbr_sender) = self.webvr_thread() {
+            let (sender, receiver) = ipc::channel().unwrap();
+            wevbr_sender.send(WebVRMsg::GetGamepads(sender)).unwrap();
+            match receiver.recv().unwrap() {
+                Ok(gamepads) => {
+                    // Sync displays
+                    for gamepad in gamepads {
+                        self.sync_gamepad(gamepad.0, gamepad.1, &gamepad.2);
+                    }
+                },
+                Err(_) => {}
+            }
+        }
+        //}
+
+        self.gamepads.borrow().iter()
+                              .map(|g| Root::from_ref(&**g))
+                              .collect()
+
     }
 }
 

@@ -96,6 +96,12 @@ impl VRPose {
     }
 }
 
+impl Drop for VRPose {
+     fn drop(&mut self) {
+         println!("Drop VRPose");
+     }
+}
+
 impl VRPoseMethods for VRPose {
     #[allow(unsafe_code)]
     // https://w3c.github.io/webvr/#dom-vrpose-position
