@@ -362,7 +362,8 @@ impl webrender_traits::VRCompositorHandler for WebVRCompositorHandler {
                         let layer = VRLayer {
                             texture_id: texture_id,
                             left_bounds: left_bounds,
-                            right_bounds: right_bounds
+                            right_bounds: right_bounds,
+                            texture_size: None
                         };
                         unsafe {
                             (*compositor.0).submit_frame(&layer);
