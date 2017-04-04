@@ -97,16 +97,16 @@ public class MainActivity extends android.app.NativeActivity {
             addFullScreenListener();
         }
 
-        set_url(getAppDataDir() + "/webvr/index.html");
+        //set_url(getAppDataDir() + "/webvr/vr-controllers.html");
         
-        /*final Intent intent = getIntent();
+        final Intent intent = getIntent();
         if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction())) {
             final String url = intent.getDataString();
             if (url != null && URLUtil.isValidUrl(url)) {
                 Log.d(LOGTAG, "Received url "+url);
                 set_url(url);
             }
-        }*/
+        }
     }
 
     @Override

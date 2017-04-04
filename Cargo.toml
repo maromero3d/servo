@@ -21,5 +21,5 @@ opt-level = 3
 #"html5ever:0.14.1" = { path = "/home/mortimer/Projects/html5ever" }
 #"https://github.com/servo/angle#0.2.0" = { path = "/home/mortimer/Projects/angle" }
 "servo-glutin:0.10.0" = { path = "/home/mortimer/Projects/glutin" }
-#"https://github.com/servo/webrender#0.26.0" = { path = '/home/mortimer/Projects/webrender/webrender/' }
-#"https://github.com/servo/webrender#webrender_traits:0.27.0" = { path = '/home/mortimer/Projects/webrender/webrender_traits' }
+"https://github.com/servo/webrender#0.26.0" = { path = '/home/mortimer/Projects/webrender/webrender/' }
+"https://github.com/servo/webrender#webrender_traits:0.27.0" = { path = '/home/mortimer/Projects/webrender/webrender_traits' }

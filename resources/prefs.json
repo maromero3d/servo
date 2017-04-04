@@ -62,7 +62,7 @@
   "network.mime.sniff": false,
   "session-history.max-length": 20,
   "shell.builtin-key-shortcuts.enabled": true,
-  "shell.homepage": "https://servo.org",
+  "shell.homepage": "/sdcard/Android/data/com.mozilla.servo/files/webvr/vr-controllers.html",
   "shell.keep_screen_on.enabled": false,
   "shell.native-orientation": "both",
   "shell.native-titlebar.enabled": true
