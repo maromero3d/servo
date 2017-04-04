@@ -48,10 +48,12 @@ impl GamepadList {
 }
 
 impl GamepadListMethods for GamepadList {
+    // https://www.w3.org/TR/gamepad/#dom-navigator-getgamepads
     fn Length(&self) -> u32 {
         self.list.borrow().len() as u32
     }
 
+    // https://www.w3.org/TR/gamepad/#dom-navigator-getgamepads
     fn Item(&self, index: u32) -> Option<Root<Gamepad>> {
         if (index as usize) < self.list.borrow().len() {
             Some(Root::from_ref(&*(self.list.borrow()[index as usize])))
@@ -60,6 +62,7 @@ impl GamepadListMethods for GamepadList {
         }
     }
 
+    // https://www.w3.org/TR/gamepad/#dom-navigator-getgamepads
     fn IndexedGetter(&self, index: u32) -> Option<Root<Gamepad>> {
         self.Item(index)
     }

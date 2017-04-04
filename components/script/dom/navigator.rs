@@ -149,8 +149,8 @@ impl NavigatorMethods for Navigator {
 }
 
 impl Navigator {
-     pub fn handle_webvr_event(&self, event: WebVREventMsg) {
+     pub fn handle_webvr_events(&self, events: Vec<WebVREventMsg>) {
          self.vr.get().expect("Shouldn't arrive here with an empty VR instance")
-                      .handle_webvr_event(event);
+                      .handle_webvr_events(events);
      }
 }

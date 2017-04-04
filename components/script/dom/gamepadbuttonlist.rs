@@ -34,7 +34,7 @@ impl GamepadButtonList {
                            GamepadButtonListBinding::Wrap)
     }
 
-    pub fn new_from_vr(global: &GlobalScope, buttons: &Vec<WebVRGamepadButton>) -> Root<GamepadButtonList> {
+    pub fn new_from_vr(global: &GlobalScope, buttons: &[WebVRGamepadButton]) -> Root<GamepadButtonList> {
         let mut list = Vec::new();
         for btn in buttons {
             list.push(GamepadButton::new(&global, btn.pressed, btn.touched));
@@ -43,7 +43,7 @@ impl GamepadButtonList {
         GamepadButtonList::new(&global, list)
     }
 
-    pub fn sync_vr(&self, vr_buttons: &Vec<WebVRGamepadButton>) {
+    pub fn sync_vr(&self, vr_buttons: &[WebVRGamepadButton]) {
         let mut index = 0;
         for btn in vr_buttons {
             self.list.get(index).as_ref().unwrap().update(btn.pressed, btn.touched);
@@ -53,11 +53,12 @@ impl GamepadButtonList {
 }
 
 impl GamepadButtonListMethods for GamepadButtonList {
-    
+    // https://www.w3.org/TR/gamepad/#dom-gamepad-buttons
     fn Length(&self) -> u32 {
         self.list.len() as u32
     }
 
+    // https://www.w3.org/TR/gamepad/#dom-gamepad-buttons
     fn Item(&self, index: u32) -> Option<Root<GamepadButton>> {
         if (index as usize) < self.list.len() {
             Some(Root::from_ref(&*(self.list[index as usize])))
@@ -66,7 +67,7 @@ impl GamepadButtonListMethods for GamepadButtonList {
         }
     }
 
-    // check-tidy: no specs after this line
+    // https://www.w3.org/TR/gamepad/#dom-gamepad-buttons
     fn IndexedGetter(&self, index: u32) -> Option<Root<GamepadButton>> {
         self.Item(index)
     }

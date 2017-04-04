@@ -20,6 +20,8 @@ pub use webvr::VREye as WebVREye;
 pub use webvr::VREyeParameters as WebVREyeParameters;
 pub use webvr::VRFieldOfView as WebVRFieldOfView;
 pub use webvr::VRGamepadButton as WebVRGamepadButton;
+pub use webvr::VRGamepadEvent as WebVRGamepadEvent;
+pub use webvr::VRGamepadData as WebVRGamepadData;
 pub use webvr::VRGamepadState as WebVRGamepadState;
 pub use webvr::VRFrameData as WebVRFrameData;
 pub use webvr::VRLayer as WebVRLayer;

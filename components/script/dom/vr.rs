@@ -12,6 +12,7 @@ use dom::bindings::reflector::{DomObject, reflect_dom_object};
 use dom::event::Event;
 use dom::eventtarget::EventTarget;
 use dom::gamepad::Gamepad;
+use dom::gamepadevent::GamepadEventType;
 use dom::globalscope::GlobalScope;
 use dom::promise::Promise;
 use dom::vrdisplay::VRDisplay;
@@ -155,14 +156,30 @@ impl VR {
                     }
                 };
             },
-            WebVREventMsg::GamepadUpdate(updates) => {
-                for update in &updates {
-                    if let Some(gamepad) = self.find_gamepad(update.0) {
-                        gamepad.update_from_vr(&update.1);
+            WebVREventMsg::GamepadEvent(event) => {
+                match &event {
+                    &WebVRGamepadEvent::Connect(ref data, ref state) => {
+                        if let Some(gamepad) = self.find_gamepad(state.gamepad_id) {
+                            gamepad.update_from_vr(&state);
+                        } else {
+                            // new gamepad
+                            self.sync_gamepad(Some(data.clone()), state);
+                        }
+                    },
+                    &WebVRGamepadEvent::Disconnect(id) => {
+                        if let Some(gamepad) = self.find_gamepad(id) {
+                            gamepad.update_connected(false);
+                        }
                     }
-                }
+                };
             }
         };
+    }
+
+    pub fn handle_webvr_events(&self, events: Vec<WebVREventMsg>) {
+        for event in events {
+            self.handle_webvr_event(event);
+        }
     }
 
     fn notify_event(&self, display: &VRDisplay, event: &WebVRDisplayEvent) {
@@ -180,41 +197,46 @@ impl VR {
                      .map(|g| Root::from_ref(&**g))
     }
 
-    fn sync_gamepad(&self, display_id: u64, name: String, state: &WebVRGamepadState) {
-        if let Some(existing) = self.find_gamepad(display_id) {
+    fn sync_gamepad(&self, data: Option<WebVRGamepadData>, state: &WebVRGamepadState) {
+        if let Some(existing) = self.find_gamepad(state.gamepad_id) {
             existing.update_from_vr(&state);
         } else {
             let index = self.gamepads.borrow().len();
+            let data = data.unwrap_or_default();
             let root = Gamepad::new_from_vr(&self.global(),
-                                            name,
-                                            display_id,
                                             index as u32,
+                                            &data,
                                             &state);
             self.gamepads.borrow_mut().push(JS::from_ref(&*root));
+            if state.connected {
+                root.notify_event(GamepadEventType::Connected);
+            }
         }
     }
 
+    // Gamepads are synced immediately in response to the API call.
+    // The current approach allows the to sample gamepad state multiple times per frame. This
+    // guarantees that the gamepads always have a valid state and can be very useful for
+    // motion capture or drawing applications.
     pub fn get_gamepads(&self) -> Vec<Root<Gamepad>> {
-        //if self.gamepads.borrow().len() == 0 {
         if let Some(wevbr_sender) = self.webvr_thread() {
             let (sender, receiver) = ipc::channel().unwrap();
-            wevbr_sender.send(WebVRMsg::GetGamepads(sender)).unwrap();
+            let synced_ids = self.gamepads.borrow().iter().map(|g| g.display_id()).collect();
+            wevbr_sender.send(WebVRMsg::GetGamepads(synced_ids, sender)).unwrap();
             match receiver.recv().unwrap() {
                 Ok(gamepads) => {
                     // Sync displays
                     for gamepad in gamepads {
-                        self.sync_gamepad(gamepad.0, gamepad.1, &gamepad.2);
+                        self.sync_gamepad(gamepad.0, &gamepad.1);
                     }
                 },
                 Err(_) => {}
             }
         }
-        //}
 
+        // We can add other not VR related gamepad providers here
         self.gamepads.borrow().iter()
                               .map(|g| Root::from_ref(&**g))
                               .collect()
-
     }
 }
-

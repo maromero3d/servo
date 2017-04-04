@@ -108,12 +108,9 @@ impl WebVRThread {
                 WebVRMsg::CreateCompositor(display_id) => {
                     self.handle_create_compositor(display_id);
                 },
-                WebVRMsg::GetGamepads(sender) => {
-                    self.handle_get_gamepads(sender);
-                },
-                WebVRMsg::UpdateGamepads() => {
-                    self.handle_update_gamepads();
-                },
+                WebVRMsg::GetGamepads(synced_ids, sender) => {
+                    self.handle_get_gamepads(synced_ids, sender);
+                }
                 WebVRMsg::Exit => {
                     break
                 },
@@ -188,7 +185,7 @@ impl WebVRThread {
                 self.presenting.insert(display_id, pipeline);
                 let data = display.borrow().data();
                 sender.send(Ok(())).unwrap();
-                self.notify_event(VRDisplayEvent::PresentChange(data, true));
+                self.notify_event(VRDisplayEvent::PresentChange(data, true).into());
             },
             Err(msg) => {
                 sender.send(Err(msg.into())).unwrap();
@@ -207,7 +204,7 @@ impl WebVRThread {
                     sender.send(Ok(())).unwrap();
                 }
                 let data = display.borrow().data();
-                self.notify_event(VRDisplayEvent::PresentChange(data, false));
+                self.notify_event(VRDisplayEvent::PresentChange(data, false).into());
             },
             Err(msg) => {
                 if let Some(sender) = sender {
@@ -222,28 +219,23 @@ impl WebVRThread {
         self.vr_compositor_chan.send(compositor).unwrap();
     }
 
-    fn handle_get_gamepads(&mut self, sender: IpcSender<WebVRResult<Vec<(u64, String, VRGamepadState)>>>) {
+    fn handle_get_gamepads(&mut self,
+                           synced_ids: Vec<u64>,
+                           sender: IpcSender<WebVRResult<Vec<(Option<VRGamepadData>, VRGamepadState)>>>) {
         let gamepads = self.service.get_gamepads();
-        let data = gamepads.iter().map(|g| {let g = g.borrow(); (g.id(), g.name(), g.state())}).collect();
+        let data = gamepads.iter().map(|g| { 
+            let g = g.borrow();
+            // Optimization, don't fetch and send gamepad static data when the gamepad is already synced.
+            let data = if synced_ids.iter().any(|v| *v == g.id()) {
+                None
+            } else {
+                Some(g.data())
+            };
+            (data, g.state()) 
+        }).collect();
         sender.send(Ok(data)).unwrap();
     }
 
-    fn handle_update_gamepads(&mut self) {
-        let gamepads = self.service.get_gamepads();
-        if gamepads.len() == 0 {
-            return;
-        }
-
-        let mut data = Vec::new();
-        for gamepad in gamepads {
-            let gamepad = gamepad.borrow();
-            data.push((gamepad.id(), gamepad.state()));
-        }
-        let pipeline_ids: Vec<PipelineId> = self.contexts.iter().map(|c| *c).collect();
-        let event = WebVREventMsg::GamepadUpdate(data);
-        self.constellation_chan.send(ConstellationMsg::WebVREvent(pipeline_ids.clone(), event)).unwrap();
-    }
-    
     fn poll_events(&mut self, sender: IpcSender<bool>) {
         loop {
             let events = self.service.poll_events();
@@ -258,16 +250,20 @@ impl WebVRThread {
         sender.send(self.polling_events).unwrap();
     }
 
-    fn notify_events(&self, events: Vec<VRDisplayEvent>) {
+    fn notify_events(&self, mut events: Vec<VREvent>) {
         let pipeline_ids: Vec<PipelineId> = self.contexts.iter().map(|c| *c).collect();
-        for event in events {
-            let event = WebVREventMsg::DisplayEvent(event);
-            self.constellation_chan.send(ConstellationMsg::WebVREvent(pipeline_ids.clone(), event)).unwrap();
-        }
+        let events = events.drain(0..).map(|ev| {
+            match ev {
+                VREvent::Display(ev) => WebVREventMsg::DisplayEvent(ev),
+                VREvent::Gamepad(ev) => WebVREventMsg::GamepadEvent(ev),
+            }
+        }).collect();
+
+        self.constellation_chan.send(ConstellationMsg::WebVREvent(pipeline_ids.clone(), events)).unwrap();
     }
 
     #[inline]
-    fn notify_event(&self, event: VRDisplayEvent) {
+    fn notify_event(&self, event: VREvent) {
         self.notify_events(vec![event]);
     }
 

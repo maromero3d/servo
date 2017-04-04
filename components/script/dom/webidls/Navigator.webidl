@@ -71,5 +71,5 @@ partial interface Navigator {
 
 // https://www.w3.org/TR/gamepad/#navigator-interface-extension
 partial interface Navigator {
-    GamepadList getGamepads();
+    [Pref="dom.gamepad.enabled"] GamepadList getGamepads();
 };

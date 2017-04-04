@@ -3,7 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 // https://w3c.github.io/FileAPI/#dfn-filelist
-
+[Pref="dom.gamepad.enabled"]
 interface GamepadList {
   getter Gamepad? item(unsigned long index);
   readonly attribute unsigned long length;
