@@ -64,9 +64,9 @@ public class MainActivity extends android.app.NativeActivity {
         boolean keepScreenOn = preferences.optBoolean("shell.keep_screen_on.enabled", false);
         mFullScreen = !preferences.optBoolean("shell.native-titlebar.enabled", false);
         String orientation = preferences.optString("shell.native-orientation", "both");
-        keepScreenOn = true;
         mFullScreen = true;
-        orientation = "portrait";
+        keepScreenOn = true;
+        orientation = "landscape";
 
         // Handle orientation preference
         /*if (orientation.equalsIgnoreCase("portrait")) {
