@@ -11,9 +11,9 @@
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/>
 
-    <application android:label="Servo" android:icon="@mipmap/servo">
+    <application android:label="ServoUnion" android:icon="@mipmap/servo">
         <activity android:name=".MainActivity"
-                android:label="Servo"
+                android:label="ServoUnion"
                 android:screenOrientation="landscape"
                 android:configChanges="orientation|keyboardHidden|screenSize"
                 android:enableVrMode="@string/gvr_vr_mode_component"

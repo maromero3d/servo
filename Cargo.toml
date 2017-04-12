@@ -15,6 +15,10 @@ opt-level = 3
 # lto = false
 
 [replace]
-"https://github.com/servo/webrender#webrender_traits:0.31.0" = { path = '/home/mortimer/Projects/webrender_traits' }
+"https://github.com/servo/webrender#webrender_traits:0.31.0" = { path = '/home/mortimer/Projects/webrender/webrender_traits' }
+"https://github.com/servo/webrender#webrender:0.30.0" = { path = '/home/mortimer/Projects/webrender/webrender' }
 "offscreen_gl_context:0.8.6" = { path = '/home/mortimer/Projects/rust-offscreen-rendering-context' }
 "gleam:0.4.2" = { path = "/home/mortimer/Projects/gleam" }
+"rust-webvr:0.3.1" = { path = "/home/mortimer/Projects/rust-webvr" }
+"servo-glutin:0.10.1" = { path = "/home/mortimer/Projects/glutin" }
+#"servo-fontconfig-sys:4.0.2" = { path="/home/mortimer/Projects/libfontconfig" }

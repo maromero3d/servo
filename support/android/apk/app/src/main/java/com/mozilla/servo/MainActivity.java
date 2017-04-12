@@ -60,6 +60,17 @@ public class MainActivity extends android.app.NativeActivity {
             throw new RuntimeException(e);
         }
 
+        set_url(getAppDataDir() + "/union/index.html");
+
+        /*final Intent intent = getIntent();
+        if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction())) {
+            final String url = intent.getDataString();
+            if (url != null && URLUtil.isValidUrl(url)) {
+                Log.d(LOGTAG, "Received url "+url);
+                set_url(url);
+            }
+        }*/
+
         JSONObject preferences = loadPreferences();
         boolean keepScreenOn = preferences.optBoolean("shell.keep_screen_on.enabled", false);
         mFullScreen = !preferences.optBoolean("shell.native-titlebar.enabled", false);
@@ -95,17 +106,6 @@ public class MainActivity extends android.app.NativeActivity {
         // Handle full screen preference
         if (mFullScreen) {
             addFullScreenListener();
-        }
-
-        //set_url(getAppDataDir() + "/webvr/vr-controllers.html");
-        
-        final Intent intent = getIntent();
-        if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction())) {
-            final String url = intent.getDataString();
-            if (url != null && URLUtil.isValidUrl(url)) {
-                Log.d(LOGTAG, "Received url "+url);
-                set_url(url);
-            }
         }
     }
 
