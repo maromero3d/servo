@@ -13,6 +13,16 @@
                 color: #fff;
                 margin: 0px;
             }
+
+            #webgl-canvas {
+                display: block;
+                height: 100%;
+                left: 0;
+                margin: 0;
+                position: absolute;
+                top: 0;
+                width: 100%;
+            }
         </style>
 
 
@@ -180,6 +190,7 @@
     </head>
 
     <body>
+        <canvas id="webgl-canvas"></canvas>
         <script src="three.js"></script>
 
         <script src="js/loaders/OBJLoader.js"></script>
@@ -259,7 +270,8 @@
             var reflectionCube ;
 
             function init() {
-                renderer = new THREE.WebGLRenderer();
+                canvas = document.getElementById("webgl-canvas");
+                renderer = new THREE.WebGLRenderer({canvas: canvas});
                 if (display) {
                     var params = display.getEyeParameters("left");
                     w = params.renderWidth * 2.0,
@@ -272,11 +284,9 @@
                 renderer.setSize( w, h);
                 document.body.appendChild(renderer.domElement);
 
-                canvas = renderer.domElement;
-
                 console.log("Mortimer:",canvas.width, canvas.height, w, h);
 
-                //document.addEventListener( 'touchstart', onRequestPresent, false );
+                document.addEventListener( 'touchstart', onRequestPresent, false );
 
                 //document.addEventListener( 'mousemove', onDocumentMouseMove, false );
                 //document.addEventListener( 'touchmove', onDocumentTouchMove, false );
@@ -335,13 +345,9 @@
 
                     //scene.add( object );
                     logo = object ;
-                    raf();
-                    if (display) {
-                        setTimeout(onRequestPresent, 50);
-                    }
                 });
 
-                objloader.load( 'ludei_logo.obj');
+                //objloader.load( 'ludei_logo.obj');
 
                 var objloader2 = new THREE.OBJLoader();
 
@@ -351,6 +357,11 @@
                     var children = object.getDescendants();
                     children[1].material = envMtl;
                     scene.add( object );
+
+                    raf();
+                    if (display) {
+                        setTimeout(onRequestPresent, 10);
+                    }
                 });
 
                 objloader2.load( 'sphere.obj');
@@ -515,7 +526,7 @@
             }
             partHeight=0;
 
-            function setup_uniforms(time, cameraPos) {
+            function setup_uniforms(time, cameraPos, axe) {
                 var v1 = smoothstep(0.94,1.0,Math.sin(Math.PI * time*0.0008));
                 var v2 = smoothstep(0.94,1.0,Math.sin(Math.PI * (time*0.0008 + 0.2)));
 
@@ -535,9 +546,9 @@
                 partMtl.uniforms.envMap.value = reflectionCube;
                 partMtl.uniforms.camPos.value = cameraPos;
 
-                if(lastFrameTime) {
+                if(lastFrameTime && axe > 0) {
                     //if( time - timeOfLastInput > 800) {
-                        partHeight -= (time - lastFrameTime) * 0.05;
+                        partHeight -= (time - lastFrameTime) * 0.05 * axe;
                     //}
                 }
 
@@ -547,6 +558,20 @@
 
             function render() 
             {
+                var gamepads = navigator.getGamepads();
+                var axe = 1.0;
+                if (gamepads && gamepads.length > 0) {
+                    if (gamepads[0].buttons[0].touched) {
+                        axe = gamepads[0].axes[1];
+                        axe = 1.0 - (axe + 1.0) / 2.0;
+                        if (axe < 0.05) {
+                            axe = 0.0;
+                        }
+                        axe *= 3.0;
+                    }
+                }
+
+
                 var dampSpeed = 0.95;
 
                 oldMouseX = dampSpeed * oldMouseX + (1-dampSpeed) * mouseX ;
@@ -578,12 +603,11 @@
                     camera.quaternion.w = pose.orientation[3];
                     camera.quaternion.inverse();
 
-                    /*rot.setEulerFromQuaternion(camera.quaternion);
+                    rot.setEulerFromQuaternion(camera.quaternion);
 
-                    var at = rot.y;
-                    cpos.x = 25 * Math.cos(at);
-                    cpos.y = 0;
-                    cpos.z = 25 * Math.sin(at);*/
+                    rot.x = 0;
+                    rot.z = 0;
+           
 
                     var leftEye = display.getEyeParameters("left");
                     var rightEye = display.getEyeParameters("right");
@@ -604,7 +628,12 @@
                     camera.position.x = lo[0];
                     camera.position.y = lo[1];
                     camera.position.z = lo[2];
-                    setup_uniforms(time, camera.position);
+
+                    /*cpos.x = lo[0] + 5 * Math.sin(rot.y);
+                    cpos.y = lo[1];
+                    cpos.z = lo[2] + 5 * Math.cos(rot.y);*/
+
+                    setup_uniforms(time, camera.position, axe);
                     renderer.render( scene, camera );
 
                     // Render right eye
@@ -620,7 +649,12 @@
                     camera.position.x = ro[0];
                     camera.position.y = ro[1];
                     camera.position.z = ro[2];
-                    setup_uniforms(time, camera.position);
+
+                    /*cpos.x = ro[0] + 5 * Math.sin(rot.y);
+                    cpos.y = ro[1];
+                    cpos.z = ro[2] + 5 * Math.cos(rot.y);*/
+
+                    setup_uniforms(time, camera.position, axe);
                     renderer.render( scene, camera );
 
                     renderer.enableScissorTest(false);

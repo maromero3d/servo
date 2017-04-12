@@ -18064,6 +18064,7 @@ THREE.WebGLRenderer = function ( parameters ) {
 
 	var _canvas = parameters.canvas !== undefined ? parameters.canvas : document.createElement( 'canvas' )
     _canvas.setAttribute('screencanvas','1');
+	_canvas.id = "webglcanvas";
 
 	_precision = parameters.precision !== undefined ? parameters.precision : 'highp',
 
