@@ -104,26 +104,26 @@ window.VRSamplesUtil = (function () {
 
   function addButtonElement (message, key, icon) {
     var buttonElement = document.createElement("div");
-    buttonElement.classList.add = "vr-sample-button";
+    /*buttonElement.classList.add = "vr-sample-button";
     buttonElement.style.color = "#FFF";
     buttonElement.style.fontWeight = "bold";
     buttonElement.style.backgroundColor = "#888";
     buttonElement.style.borderRadius = "5px";
     buttonElement.style.border = "3px solid #555";
-    buttonElement.style.position = "relative";
-    buttonElement.style.display = "inline-block";
-    buttonElement.style.margin = "0.5em";
+    buttonElement.style.position = "relative";*/
+    //buttonElement.style.display = "inline-block";
+    /*buttonElement.style.margin = "0.5em";
     buttonElement.style.padding = "0.75em";
     buttonElement.style.cursor = "pointer";
-    buttonElement.align = "center";
+    buttonElement.align = "center";*/
 
-    if (icon) {
+    /*if (icon) {
       buttonElement.innerHTML = "<img src='" + icon + "'/><br/>" + message;
     } else {
       buttonElement.innerHTML = message;
-    }
+    }*/
 
-    if (key) {
+    /*if (key) {
       var keyElement = document.createElement("span");
       keyElement.classList.add = "vr-sample-button-accelerator";
       keyElement.style.fontSize = "0.75em";
@@ -131,9 +131,9 @@ window.VRSamplesUtil = (function () {
       keyElement.innerHTML = " (" + key + ")";
 
       buttonElement.appendChild(keyElement);
-    }
+    }*/
 
-    getButtonContainer().appendChild(buttonElement);
+    //getButtonContainer().appendChild(buttonElement);
 
     return buttonElement;
   }
