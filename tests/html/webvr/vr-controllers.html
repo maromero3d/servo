@@ -348,7 +348,11 @@ found in the LICENSE file.
         }
       }
 
+      var last = 0;
       function onAnimationFrame (t) {
+        var fps = t - last;
+				last = t;
+				console.log(fps);
         //console.log("raf" + t);
         stats.begin();
 

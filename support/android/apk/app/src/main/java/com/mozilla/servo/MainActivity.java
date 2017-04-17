@@ -60,6 +60,8 @@ public class MainActivity extends android.app.NativeActivity {
             throw new RuntimeException(e);
         }
 
+        //String url = getAppDataDir() + "/rollercoaster/index.html";
+        //set_url(url);
         final Intent intent = getIntent();
         if (intent != null && intent.getAction() != null && intent.getAction().equals(Intent.ACTION_VIEW)) {
             final String url = intent.getDataString();
