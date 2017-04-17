@@ -238,7 +238,12 @@ impl WebVRThread {
 
     fn poll_events(&mut self, sender: IpcSender<bool>) {
         loop {
+            println!("PollEvents prev");
             let events = self.service.poll_events();
+            println!("PollEvents post {:?}", events.len());
+            for event in &events {
+                println!("VREvent: {:?}", event);
+            }
             if events.is_empty() {
                 break;
             }

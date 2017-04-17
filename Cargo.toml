@@ -13,3 +13,11 @@ opt-level = 3
 # Uncomment to profile on Linux:
 # debug = true
 # lto = false
+
+[replace]
+"rust-webvr:0.3.1" = { path = "/home/mortimer/Projects/rust-webvr" }
+"servo-glutin:0.10.1" = { path = "/home/mortimer/Projects/glutin" }
+"https://github.com/servo/webrender#0.31.0" = { path = "/home/mortimer/Projects/webrender/webrender" }
+"https://github.com/servo/webrender#webrender_traits:0.32.0" = { path = "/home/mortimer/Projects/webrender/webrender_traits" }
+"offscreen_gl_context:0.8.6" = { path = "/home/mortimer/Projects/rust-offscreen-rendering-context" }
+"gleam:0.4.2" = { path = "/home/mortimer/Projects/gleam" }

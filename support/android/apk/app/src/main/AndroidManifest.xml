@@ -14,6 +14,7 @@
     <application android:label="Servo" android:icon="@mipmap/servo">
         <activity android:name=".MainActivity"
                 android:label="Servo"
+            android:launchMode="singleTop"
                 android:screenOrientation="landscape"
                 android:configChanges="orientation|keyboardHidden|screenSize"
                 android:enableVrMode="@string/gvr_vr_mode_component"

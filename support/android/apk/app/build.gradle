@@ -71,6 +71,7 @@ android {
         }
 
         release {
+            debuggable true
             signingConfig signingConfigs.debug // Change this to sign with a production key
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
