@@ -389,8 +389,16 @@ impl WebGLRenderingContext {
 
         match (format, data_type) {
             (TexFormat::RGBA, TexDataType::UnsignedByte) => pixels,
-            (TexFormat::RGB, TexDataType::UnsignedByte) => pixels,
-
+            (TexFormat::RGB, TexDataType::UnsignedByte) => {
+                // Remove alpha channel
+                let mut rgb8 = Vec::<u8>::with_capacity(pixel_count * 3);
+                for rgba8 in pixels.chunks(4) {
+                    rgb8.push(rgba8[0]);
+                    rgb8.push(rgba8[1]);
+                    rgb8.push(rgba8[2]);
+                }
+                rgb8
+            },
             (TexFormat::RGBA, TexDataType::UnsignedShort4444) => {
                 let mut rgba4 = Vec::<u8>::with_capacity(pixel_count * 2);
                 for rgba8 in pixels.chunks(4) {
@@ -479,7 +487,6 @@ impl WebGLRenderingContext {
             // WebGLContext (probably via GetPixels()).
             ImageDataOrHTMLImageElementOrHTMLCanvasElementOrHTMLVideoElement::HTMLCanvasElement(canvas) => {
                 if let Some((mut data, size)) = canvas.fetch_all_data() {
-                    byte_swap(&mut data);
                     (data, size)
                 } else {
                     return Err(());
@@ -644,6 +651,51 @@ impl WebGLRenderingContext {
         }
     }
 
+    fn remove_premultiplied_alpha(&self,
+                                  format: TexFormat,
+                                  data_type: TexDataType,
+                                  mut pixels: Vec<u8>) -> Vec<u8> {
+         match (format, data_type) {
+            (TexFormat::RGBA, TexDataType::UnsignedByte) => {
+                for mut rgba in pixels.chunks(4) {
+                    let a = (rgba[3] as f32)/255.0;
+                    rgba[0] = (rgba[0] as f32/a) as u8;
+                    rgba[1] = (rgba[1] as f32/a) as u8;
+                    rgba[2] = (rgba[2] as f32/a) as u8;
+                }
+                pixels
+            },
+            (TexFormat::RGB, _) => {
+                pixels
+            },
+            _ => {
+                // For now Servo's images are all stored as RGBA8 internally.
+               unimplemented!();
+            }
+         }
+    }
+
+    fn prepare_pixels(&self,
+                      internal_format: TexFormat,
+                      data_type: TexDataType,
+                      width: u32,
+                      height: u32,
+                      unpacking_alignment: u32,
+                      source_premultiplied: bool,
+                      mut pixels: Vec<u8>) -> Vec<u8> {
+        let dest_premultiply = self.texture_unpacking_settings.get().contains(PREMULTIPLY_ALPHA);
+        if !source_premultiplied && dest_premultiply {
+            pixels = self.premultiply_pixels(internal_format, data_type, pixels);
+        }
+        else if source_premultiplied && !dest_premultiply {
+            pixels = self.remove_premultiplied_alpha(internal_format, data_type, pixels);
+        }
+
+        // FINISHME: Consider doing premultiply and flip in a single mutable Vec.
+        self.flip_teximage_y(pixels, internal_format, data_type,
+                             width as usize, height as usize, unpacking_alignment as usize)
+    }
+
     fn tex_image_2d(&self,
                     texture: Root<WebGLTexture>,
                     target: TexImageTarget,
@@ -655,11 +707,9 @@ impl WebGLRenderingContext {
                     _border: u32,
                     unpacking_alignment: u32,
                     pixels: Vec<u8>) { // NB: pixels should NOT be premultipied
-        // FINISHME: Consider doing premultiply and flip in a single mutable Vec.
-        let pixels = self.premultiply_pixels(internal_format, data_type, pixels);
 
-        let pixels = self.flip_teximage_y(pixels, internal_format, data_type,
-                                          width as usize, height as usize, unpacking_alignment as usize);
+        let pixels = self.prepare_pixels(internal_format, data_type, width, height,
+                                         unpacking_alignment, false, pixels);
 
         // TexImage2D depth is always equal to 1
         handle_potential_webgl_error!(self, texture.initialize(target,
@@ -724,11 +774,8 @@ impl WebGLRenderingContext {
             return self.webgl_error(InvalidOperation);
         }
 
-        // FINISHME: Consider doing premultiply and flip in a single mutable Vec.
-        let pixels = self.premultiply_pixels(format, data_type, pixels);
-
-        let pixels = self.flip_teximage_y(pixels, format, data_type,
-                                          width as usize, height as usize, unpacking_alignment as usize);
+        let pixels = self.prepare_pixels(internal_format, data_type, width, height,
+                                         unpacking_alignment, false, pixels);
 
         // Set the unpack alignment.  For textures coming from arrays,
         // this will be the current value of the context's
