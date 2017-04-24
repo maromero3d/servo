@@ -389,8 +389,16 @@ impl WebGLRenderingContext {
 
         match (format, data_type) {
             (TexFormat::RGBA, TexDataType::UnsignedByte) => pixels,
-            (TexFormat::RGB, TexDataType::UnsignedByte) => pixels,
-
+            (TexFormat::RGB, TexDataType::UnsignedByte) => {
+                // Remove alpha channel
+                let mut rgb8 = Vec::<u8>::with_capacity(pixel_count * 3);
+                for rgba8 in pixels.chunks(4) {
+                    rgb8.push(rgba8[0]);
+                    rgb8.push(rgba8[1]);
+                    rgb8.push(rgba8[2]);
+                }
+                rgb8
+            },
             (TexFormat::RGBA, TexDataType::UnsignedShort4444) => {
                 let mut rgba4 = Vec::<u8>::with_capacity(pixel_count * 2);
                 for rgba8 in pixels.chunks(4) {
@@ -479,7 +487,6 @@ impl WebGLRenderingContext {
             // WebGLContext (probably via GetPixels()).
             ImageDataOrHTMLImageElementOrHTMLCanvasElementOrHTMLVideoElement::HTMLCanvasElement(canvas) => {
                 if let Some((mut data, size)) = canvas.fetch_all_data() {
-                    byte_swap(&mut data);
                     (data, size)
                 } else {
                     return Err(());
