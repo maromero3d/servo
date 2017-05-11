@@ -32,6 +32,7 @@
 
 use atomic_refcell::{AtomicRef, AtomicRefCell, AtomicRefMut};
 use core::nonzero::NonZero;
+use core::cell::UnsafeCell;
 use data::{LayoutDataFlags, PersistentLayoutData};
 use script_layout_interface::{OpaqueStyleAndLayoutData, PartialPersistentLayoutData};
 use script_layout_interface::wrapper_traits::{LayoutNode, ThreadSafeLayoutElement, ThreadSafeLayoutNode};
@@ -39,6 +40,7 @@ use script_layout_interface::wrapper_traits::GetLayoutData;
 use style::computed_values::content::{self, ContentItem};
 use style::dom::{NodeInfo, TNode};
 use style::selector_parser::RestyleDamage;
+use std::mem;
 
 pub type NonOpaqueStyleAndLayoutData = AtomicRefCell<PersistentLayoutData>;
 
@@ -58,11 +60,11 @@ pub trait LayoutNodeLayoutData {
 
 impl<T: GetLayoutData> LayoutNodeLayoutData for T {
     fn borrow_layout_data(&self) -> Option<AtomicRef<PersistentLayoutData>> {
-        self.get_raw_data().map(|d| d.borrow())
+        self.get_raw_data().map(|d| { println!("borrow {:?}", d.as_ptr()); d.borrow()})
     }
 
     fn mutate_layout_data(&self) -> Option<AtomicRefMut<PersistentLayoutData>> {
-        self.get_raw_data().map(|d| d.borrow_mut())
+        self.get_raw_data().map(|d| { println!("borrow_mut {:?}", d.as_ptr()); d.borrow_mut()})
     }
 
     fn flow_debug_id(self) -> usize {
@@ -91,11 +93,34 @@ pub trait LayoutNodeHelpers {
 impl<T: LayoutNode> LayoutNodeHelpers for T {
     fn initialize_data(&self) {
         if self.get_raw_data().is_none() {
-            let ptr: *mut NonOpaqueStyleAndLayoutData =
-                Box::into_raw(box AtomicRefCell::new(PersistentLayoutData::new()));
+            let test1 = box AtomicRefCell::new(PersistentLayoutData::new());
+            println!("initialize_data1 {:?}", test1.as_ptr());
+
+            /*let a = UnsafeCell::new(test1.as_ptr());
+            let a_ptr: *const UnsafeCell<PersistentLayoutData> = unsafe {mem::transmute(&a)};
+            //let b = UnsafeCell::new(test1.as_ptr() as * mut PartialPersistentLayoutData);
+            let b: * const UnsafeCell<*mut PartialPersistentLayoutData> = unsafe { mem::transmute(a_ptr)};
+
+            println!("Ptr {:?} {:?}", test1.as_ptr(), test1.as_ptr() as * mut PartialPersistentLayoutData);
+            //println!("Cell1 {:?} {:?}", unsafe {a.into_inner()}, unsafe{b.into_inner()});
+            println!("Cell2 {:?} {:?}", unsafe {*a.get()}, unsafe{*(*b).get()});*/
+            println!("Sizes {} {} ", mem::size_of::<AtomicRefCell<PersistentLayoutData>>(),
+                                     mem::size_of::<AtomicRefCell<PartialPersistentLayoutData>>());
+
+            let ptr: *mut NonOpaqueStyleAndLayoutData = Box::into_raw(test1);
+            println!("initialize_data1a {:?}",  unsafe { (*ptr).as_ptr() });
+
+            //let mut ptr: *mut Box<AtomicRefCell<PartialPersistentLayoutData>> = unsafe { mem::transmute(&test1) };
+
+            let test2 = ptr as *mut AtomicRefCell<PartialPersistentLayoutData>;
+            println!("initialize_data2 {:?}",  unsafe { (*test2).as_ptr() });
+
             let opaque = OpaqueStyleAndLayoutData {
-                ptr: unsafe { NonZero::new(ptr as *mut AtomicRefCell<PartialPersistentLayoutData>) }
+                ptr: unsafe { NonZero::new(test2) }
             };
+
+            println!("initialize_data3 {:?}",  unsafe { (*opaque.ptr.get()).as_ptr() });
+
             unsafe { self.init_style_and_layout_data(opaque) };
         };
     }
@@ -159,10 +184,12 @@ impl<T: ThreadSafeLayoutNode> ThreadSafeLayoutNodeHelpers for T {
     }
 
     fn restyle_damage(self) -> RestyleDamage {
+        println!("restyle_damage1");
         // We need the underlying node to potentially access the parent in the
         // case of text nodes. This is safe as long as we don't let the parent
         // escape and never access its descendants.
         let mut node = unsafe { self.unsafe_get() };
+        println!("restyle_damage2");
 
         // If this is a text node, use the parent element, since that's what
         // controls our style.
@@ -171,19 +198,30 @@ impl<T: ThreadSafeLayoutNode> ThreadSafeLayoutNodeHelpers for T {
             debug_assert!(node.is_element());
         }
 
+        println!("restyle_damage3");
+
+
         let data = node.borrow_layout_data().unwrap();
+        println!("data_base {:?}", &data.base as *const PartialPersistentLayoutData);
         if let Some(r) = data.base.style_data.get_restyle() {
             // We're reflowing a node that just got a restyle, and so the
             // damage has been computed and stored in the RestyleData.
-            r.damage
+            println!("restyle_damage4a");
+            let a = r.damage;
+            println!("restyle_damage4b");
+            panic!("baina nor da hordu honetan?");
+            a
+
         } else if !data.flags.contains(::data::HAS_BEEN_TRAVERSED) {
             // We're reflowing a node that was styled for the first time and
             // has never been visited by layout. Return rebuild_and_reflow,
             // because that's what the code expects.
+            println!("restyle_damage5");
             RestyleDamage::rebuild_and_reflow()
         } else {
             // We're reflowing a node whose style data didn't change, but whose
             // layout may change due to changes in ancestors or descendants.
+            println!("restyle_damage6");
             RestyleDamage::empty()
         }
     }

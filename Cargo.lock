@@ -86,7 +86,12 @@ dependencies = [
 [[package]]
 name = "atomic_refcell"
 version = "0.1.0"
+
+[[package]]
+name = "atomic_refcell"
+version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+replace = "atomic_refcell 0.1.0"
 
 [[package]]
 name = "audio-video-metadata"
