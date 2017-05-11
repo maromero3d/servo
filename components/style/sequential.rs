@@ -21,15 +21,21 @@ pub fn traverse_dom<E, D>(traversal: &D,
     where E: TElement,
           D: DomTraversal<E>,
 {
+    println!("traverse_dom1");
     let dump_stats = traversal.shared_context().options.dump_style_statistics;
     let start_time = if dump_stats { Some(time::precise_time_s()) } else { None };
 
     debug_assert!(!traversal.is_parallel());
     debug_assert!(token.should_traverse());
 
+    println!("traverse_dom2");
+    
+
     let mut discovered = VecDeque::<WorkItem<E::ConcreteNode>>::with_capacity(16);
     let mut tlc = traversal.create_thread_local_context();
     let root_depth = root.depth();
+
+    println!("traverse_dom3");
 
     if token.traverse_unstyled_children_only() {
         for kid in root.as_node().children() {
@@ -41,13 +47,18 @@ pub fn traverse_dom<E, D>(traversal: &D,
         discovered.push_back(WorkItem(root.as_node(), root_depth));
     }
 
+    println!("traverse_dom4");
+
     // Process the nodes breadth-first, just like the parallel traversal does.
     // This helps keep similar traversal characteristics for the style sharing
     // cache.
     while let Some(WorkItem(node, depth)) = discovered.pop_front() {
+        println!("loop1");
         let mut children_to_process = 0isize;
         let traversal_data = PerLevelTraversalData { current_dom_depth: depth };
+        println!("loop2__");
         traversal.process_preorder(&traversal_data, &mut tlc, node);
+        println!("loop3");
 
         if let Some(el) = node.as_element() {
             traversal.traverse_children(&mut tlc, el, |_tlc, kid| {
@@ -56,9 +67,14 @@ pub fn traverse_dom<E, D>(traversal: &D,
             });
         }
 
+        println!("loop4");
+
         traversal.handle_postorder_traversal(&mut tlc, root.as_node().opaque(),
                                              node, children_to_process);
+        println!("loop5");
     }
+
+    println!("traverse_dom5");
 
     // Dump statistics to stdout if requested.
     if dump_stats {
@@ -68,4 +84,6 @@ pub fn traverse_dom<E, D>(traversal: &D,
             println!("{}", tlsc.statistics);
         }
     }
+
+    println!("traverse_dom6");
 }

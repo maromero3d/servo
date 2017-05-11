@@ -1109,8 +1109,10 @@ impl LayoutThread {
 
         let restyles = document.drain_pending_restyles();
         debug!("Draining restyles: {} (needs dirtying? {:?})", restyles.len(), needs_dirtying);
+        println!("handle_reflow1");
         if !needs_dirtying {
             for (el, restyle) in restyles {
+                println!("handle_reflow_for_begin");
                 // Propagate the descendant bit up the ancestors. Do this before
                 // the restyle calculation so that we can also do it for new
                 // unstyled nodes, which the descendants bit helps us find.
@@ -1133,6 +1135,7 @@ impl LayoutThread {
                 if let Some(s) = restyle.snapshot {
                     restyle_data.snapshot.ensure(move || s);
                 }
+                println!("handle_reflow_for_end");
                 debug!("Noting restyle for {:?}: {:?}", el, restyle_data);
             }
         }
@@ -1140,12 +1143,15 @@ impl LayoutThread {
         // Create a layout context for use throughout the following passes.
         let mut layout_context = self.build_layout_context(guards.clone(), &*rw_data, true);
 
+        println!("handle_reflow2");
+
         // NB: Type inference falls apart here for some reason, so we need to be very verbose. :-(
         let traversal_driver = if self.parallel_flag && self.parallel_traversal.is_some() {
             TraversalDriver::Parallel
         } else {
             TraversalDriver::Sequential
         };
+        println!("handle_reflow3");
 
         let traversal = RecalcStyleAndConstructFlows::new(layout_context, traversal_driver);
         let token = {
@@ -1155,7 +1161,10 @@ impl LayoutThread {
              DomTraversal<ServoLayoutElement>>::pre_traverse(element, stylist, TraversalFlags::empty())
         };
 
+        println!("handle_reflow4");
+
         if token.should_traverse() {
+            println!("handle_reflow_traverse1");
             // Recalculate CSS styles and rebuild flows and fragments.
             profile(time::ProfilerCategory::LayoutStyleRecalc,
                     self.profiler_metadata(),
@@ -1163,16 +1172,21 @@ impl LayoutThread {
                     || {
                 // Perform CSS selector matching and flow construction.
                 if traversal_driver.is_parallel() {
+                    println!("handle_reflow_traverse_a");
                     let pool = self.parallel_traversal.as_mut().unwrap();
                     // Parallel mode
                     parallel::traverse_dom::<ServoLayoutElement, RecalcStyleAndConstructFlows>(
                         &traversal, element, token, pool);
+                        println!("handle_reflow_traverseb");
                 } else {
                     // Sequential mode
+                    println!("handle_reflow_traversec");
                     sequential::traverse_dom::<ServoLayoutElement, RecalcStyleAndConstructFlows>(
                         &traversal, element, token);
+                    println!("handle_reflow_traversed");
                 }
             });
+            println!("handle_reflow_traverse2");       
             // TODO(pcwalton): Measure energy usage of text shaping, perhaps?
             let text_shaping_time =
                 (font::get_and_reset_text_shaping_performance_counter() as u64) /
@@ -1184,10 +1198,13 @@ impl LayoutThread {
                                     text_shaping_time,
                                     0,
                                     0);
-
+            println!("handle_reflow_traverse3");
             // Retrieve the (possibly rebuilt) root flow.
             self.root_flow = self.try_get_layout_root(element.as_node());
+            println!("handle_reflow_traverse4");
         }
+
+        println!("handle_reflow5");
 
         layout_context = traversal.destroy();
 
@@ -1198,6 +1215,8 @@ impl LayoutThread {
         if opts::get().dump_rule_tree {
             layout_context.style_context.stylist.rule_tree.dump_stdout(&guards);
         }
+
+        println!("handle_reflow6");
 
         // GC the rule tree if some heuristics are met.
         unsafe { layout_context.style_context.stylist.rule_tree.maybe_gc(); }
@@ -1212,9 +1231,13 @@ impl LayoutThread {
                                                          &mut layout_context);
         }
 
+        println!("handle_reflow7");
+
         self.respond_to_query_if_necessary(&data.query_type,
                                            &mut *rw_data,
                                            &mut layout_context);
+
+        println!("handle_reflow8");
     }
 
     fn respond_to_query_if_necessary(&mut self,

@@ -561,14 +561,22 @@ pub fn recalc_style_at<E, D>(traversal: &D,
     where E: TElement,
           D: DomTraversal<E>
 {
+    println!("recalc_style_at1");
     context.thread_local.begin_element(element, &data);
+    println!("recalc_style_at2");
     context.thread_local.statistics.elements_traversed += 1;
-    debug_assert!(data.get_restyle().map_or(true, |r| {
-        r.snapshot.is_none() && !r.has_sibling_invalidations()
-    }), "Should've computed the final hint and handled later_siblings already");
-
+    println!("recalc_style_at3");
+    let test = data.get_restyle().map_or(true, |_r| {
+        false
+        //r.snapshot.is_none()
+        //r.snapshot.is_none() && !r.has_sibling_invalidations()
+    });
+    println!("test result {}", test);
+    println!("recalc_style_at4");
     let compute_self = !data.has_current_styles();
+    println!("recalc_style_at5");
     let mut inherited_style_changed = false;
+    println!("recalc_style_at6s");
 
     debug!("recalc_style_at: {:?} (compute_self={:?}, dirty_descendants={:?}, data={:?})",
            element, compute_self, element.has_dirty_descendants(), data);

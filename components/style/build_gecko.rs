@@ -124,7 +124,8 @@ mod bindings {
             let args = [
                 "-x", "c++", "-std=c++14",
                 "-DTRACING=1", "-DIMPL_LIBXUL", "-DMOZ_STYLO_BINDINGS=1",
-                "-DMOZILLA_INTERNAL_API", "-DRUST_BINDGEN", "-DMOZ_STYLO"
+                "-DMOZILLA_INTERNAL_API", "-DRUST_BINDGEN", "-DMOZ_STYLO",
+                "-D__ANDROID__", "-DANDROID", "-DOS_ANDROID=1"
             ];
             for &arg in args.iter() {
                 builder = builder.clang_arg(arg);

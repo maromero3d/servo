@@ -61,17 +61,25 @@ impl<'a, E> DomTraversal<E> for RecalcStyleAndConstructFlows<'a>
                         thread_local: &mut Self::ThreadLocalContext, node: E::ConcreteNode) {
         // FIXME(pcwalton): Stop allocating here. Ideally this should just be
         // done by the HTML parser.
+        println!("process_preorder1");
         node.initialize_data();
+        println!("process_preorder2 {:?}", node);
 
         if !node.is_text_node() {
+            println!("process_preorder3");
             let el = node.as_element().unwrap();
+            println!("process_preorder4");
             let mut data = el.mutate_data().unwrap();
+            println!("process_preorder5");
             let mut context = StyleContext {
                 shared: &self.context.shared_context(),
                 thread_local: &mut thread_local.style_context,
             };
+            println!("process_preorder6");
             recalc_style_at(self, traversal_data, &mut context, el, &mut data);
+            println!("process_preorder7");
         }
+        println!("process_preorder8");
     }
 
     fn process_postorder(&self, thread_local: &mut Self::ThreadLocalContext, node: E::ConcreteNode) {

@@ -36,15 +36,22 @@ impl<'recalc, 'le> DomTraversal<GeckoElement<'le>> for RecalcStyleOnly<'recalc> 
                         thread_local: &mut Self::ThreadLocalContext,
                         node: GeckoNode<'le>)
     {
+        println!("process_preorder1");
         if node.is_element() {
+            println!("process_preorder2");
             let el = node.as_element().unwrap();
+            println!("process_preorder3");
             let mut data = unsafe { el.ensure_data() }.borrow_mut();
+            println!("process_preorder4");
             let mut context = StyleContext {
                 shared: &self.shared,
                 thread_local: thread_local,
             };
+            println!("process_preorder5");
             recalc_style_at(self, traversal_data, &mut context, el, &mut data);
+            println!("process_preorder6");
         }
+         println!("process_preorder_end");
     }
 
     fn process_postorder(&self, _: &mut Self::ThreadLocalContext, _: GeckoNode<'le>) {
