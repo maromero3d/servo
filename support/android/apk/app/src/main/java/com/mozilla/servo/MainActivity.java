@@ -133,17 +133,8 @@ public class MainActivity extends android.app.NativeActivity {
                     | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
                     | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION // Hides navigation bar
                     | View.SYSTEM_UI_FLAG_FULLSCREEN; // Hides status bar
-        if( android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
-            flags |= getImmersiveFlag();
-        } else {
-            flags |= View.SYSTEM_UI_FLAG_LOW_PROFILE;
-        }
-        getWindow().getDecorView().setSystemUiVisibility(flags);
-    }
 
-    @TargetApi(19)
-    private int getImmersiveFlag() {
-        return View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
+        getWindow().getDecorView().setSystemUiVisibility(flags);
     }
 
     private void addFullScreenListener() {

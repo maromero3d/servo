@@ -131,26 +131,38 @@ fn construct_flows_at<N>(context: &LayoutContext,
                              node: N)
     where N: LayoutNode,
 {
-    debug!("construct_flows_at: {:?}", node);
+    println!("construct_flows_at: {:?}", node);
 
     // Construct flows for this node.
     {
+        println!("construct1");
         let tnode = node.to_threadsafe();
+        println!("construct2");
 
         // Always reconstruct if incremental layout is turned off.
         let nonincremental_layout = opts::get().nonincremental_layout;
-        if nonincremental_layout || tnode.restyle_damage() != RestyleDamage::empty() ||
-           node.as_element().map_or(false, |el| el.has_dirty_descendants()) {
+        println!("construct3");
+        let test = node.as_element().map_or(false, |el| el.has_dirty_descendants());
+        println!("test succeeeded");
+        let test2 = tnode.restyle_damage() != RestyleDamage::empty();
+        println!("test2 succeeded");
+        if nonincremental_layout || test2 || test {
+            println!("construct4");
             let mut flow_constructor = FlowConstructor::new(context);
+            println!("construct5");
             if nonincremental_layout || !flow_constructor.repair_if_possible(&tnode) {
+                println!("construct6");
                 flow_constructor.process(&tnode);
-                debug!("Constructed flow for {:?}: {:x}",
+                println!("construct7");
+                println!("Constructed flow for {:?}: {:x}",
                        tnode,
                        tnode.flow_debug_id());
             }
         }
+        println!("construct8");
 
         tnode.mutate_layout_data().unwrap().flags.insert(::data::HAS_BEEN_TRAVERSED);
+        println!("construct9");
     }
 
     if let Some(el) = node.as_element() {

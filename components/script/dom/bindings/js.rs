@@ -122,6 +122,7 @@ unsafe impl<T: DomObject> JSTraceable for JS<T> {
 /// An unrooted reference to a DOM object for use in layout. `Layout*Helpers`
 /// traits must be implemented on this.
 #[allow_unrooted_interior]
+#[repr(C)]
 pub struct LayoutJS<T> {
     ptr: NonZero<*const T>,
 }

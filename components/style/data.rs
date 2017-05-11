@@ -25,6 +25,7 @@ use traversal::TraversalFlags;
 /// effectively a tuple of rules and computed values, that is, the rule node,
 /// and the result of computing that rule node's rules, the `ComputedValues`.
 #[derive(Clone)]
+#[repr(C)]
 pub struct ComputedStyle {
     /// The rule node representing the ordered list of rules matched for this
     /// node.
@@ -159,6 +160,7 @@ type PseudoElementCache = ();
 /// The styles associated with a node, including the styles for any
 /// pseudo-elements.
 #[derive(Clone, Debug)]
+#[repr(C)]
 pub struct ElementStyles {
     /// The element's style.
     pub primary: ComputedStyle,
@@ -429,6 +431,7 @@ impl RestyleData {
 /// inside of layout data, which itself hangs directly off the Element. In
 /// both cases, it is wrapped inside an AtomicRefCell to ensure thread safety.
 #[derive(Debug)]
+#[repr(C)]
 pub struct ElementData {
     /// The computed styles for the element and its pseudo-elements.
     styles: Option<ElementStyles>,
@@ -548,7 +551,9 @@ impl ElementData {
     pub fn ensure_restyle(&mut self) -> &mut RestyleData {
         debug_assert!(self.styles.is_some(), "restyling unstyled element");
         if self.restyle.is_none() {
+            println!("ensure_restyle2");
             self.restyle = Some(Box::new(RestyleData::default()));
+            println!("ensure_restyle3");
         }
         self.restyle.as_mut().unwrap()
     }

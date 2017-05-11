@@ -50,6 +50,7 @@ use servo_url::ServoUrl;
 use std::sync::atomic::AtomicIsize;
 use style::data::ElementData;
 
+#[repr(C)]
 pub struct PartialPersistentLayoutData {
     /// Data that the style system associates with a node. When the
     /// style system is being used standalone, this is all that hangs

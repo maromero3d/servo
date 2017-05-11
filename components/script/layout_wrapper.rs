@@ -715,6 +715,7 @@ impl<'le> ::selectors::Element for ServoLayoutElement<'le> {
 }
 
 #[derive(Copy, Clone, Debug)]
+#[repr(C)]
 pub struct ServoThreadSafeLayoutNode<'ln> {
     /// The wrapped node.
     node: ServoLayoutNode<'ln>,

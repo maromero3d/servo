@@ -39,6 +39,7 @@ use script_layout_interface::wrapper_traits::GetLayoutData;
 use style::computed_values::content::{self, ContentItem};
 use style::dom::{NodeInfo, TNode};
 use style::selector_parser::RestyleDamage;
+use std::mem;
 
 pub type NonOpaqueStyleAndLayoutData = AtomicRefCell<PersistentLayoutData>;
 
@@ -77,7 +78,7 @@ pub trait GetRawData {
 impl<T: GetLayoutData> GetRawData for T {
     fn get_raw_data(&self) -> Option<&NonOpaqueStyleAndLayoutData> {
         self.get_style_and_layout_data().map(|opaque| {
-            let container = *opaque.ptr as *mut NonOpaqueStyleAndLayoutData;
+            let container: *mut NonOpaqueStyleAndLayoutData = unsafe { mem::transmute(*opaque.ptr) };
             unsafe { &*container }
         })
     }
@@ -91,11 +92,15 @@ pub trait LayoutNodeHelpers {
 impl<T: LayoutNode> LayoutNodeHelpers for T {
     fn initialize_data(&self) {
         if self.get_raw_data().is_none() {
+            println!("initialize_data1");
             let ptr: *mut NonOpaqueStyleAndLayoutData =
                 Box::into_raw(box AtomicRefCell::new(PersistentLayoutData::new()));
+            println!("initialize_data2");
+            let ptr: *mut AtomicRefCell<PartialPersistentLayoutData> = unsafe { mem::transmute(ptr) };
             let opaque = OpaqueStyleAndLayoutData {
-                ptr: unsafe { NonZero::new(ptr as *mut AtomicRefCell<PartialPersistentLayoutData>) }
+                ptr: unsafe { NonZero::new(ptr) }
             };
+            println!("initialize_data3");
             unsafe { self.init_style_and_layout_data(opaque) };
         };
     }
@@ -162,28 +167,38 @@ impl<T: ThreadSafeLayoutNode> ThreadSafeLayoutNodeHelpers for T {
         // We need the underlying node to potentially access the parent in the
         // case of text nodes. This is safe as long as we don't let the parent
         // escape and never access its descendants.
+        println!("restyle_damage1");
         let mut node = unsafe { self.unsafe_get() };
-
+        println!("restyle_damage2");
         // If this is a text node, use the parent element, since that's what
         // controls our style.
         if node.is_text_node() {
             node = node.parent_node().unwrap();
             debug_assert!(node.is_element());
         }
+        println!("restyle_damage3");
 
         let data = node.borrow_layout_data().unwrap();
+        println!("restyle_damage4");
         if let Some(r) = data.base.style_data.get_restyle() {
             // We're reflowing a node that just got a restyle, and so the
             // damage has been computed and stored in the RestyleData.
-            r.damage
+            println!("restyle_damage5");
+            let a = r.damage;
+            println!("restyle_damage5b");
+            a
         } else if !data.flags.contains(::data::HAS_BEEN_TRAVERSED) {
             // We're reflowing a node that was styled for the first time and
             // has never been visited by layout. Return rebuild_and_reflow,
             // because that's what the code expects.
-            RestyleDamage::rebuild_and_reflow()
+            println!("restyle_damage6");
+            let a = RestyleDamage::rebuild_and_reflow();
+            println!("restyle_damage6b");
+            a
         } else {
             // We're reflowing a node whose style data didn't change, but whose
             // layout may change due to changes in ancestors or descendants.
+            println!("restyle_damage7");
             RestyleDamage::empty()
         }
     }

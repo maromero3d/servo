@@ -160,15 +160,20 @@ pub trait DomTraversal<E: TElement> : Sync {
                                   mut node: E::ConcreteNode,
                                   children_to_process: isize)
     {
+        println!("handle_postorder_traversal1");
         // If the postorder step is a no-op, don't bother.
         if !Self::needs_postorder_traversal() {
             return;
         }
 
+        println!("handle_postorder_traversal2");
         if children_to_process == 0 {
             // We are a leaf. Walk up the chain.
+            println!("handle_postorder_traversal_loop_begin");
             loop {
+                println!("zz1");
                 self.process_postorder(thread_local, node);
+                println!("z2");
                 if node.opaque() == root {
                     break;
                 }
@@ -183,11 +188,14 @@ pub trait DomTraversal<E: TElement> : Sync {
 
                 node = parent.as_node();
             }
+            println!("handle_postorder_traversal_loop_end");
         } else {
             // Otherwise record the number of children to process when the
             // time comes.
+             println!("handle_postorder_traversal3");
             node.as_element().unwrap()
                 .store_children_to_process(children_to_process);
+             println!("handle_postorder_traversal4");
         }
     }
 
@@ -566,7 +574,10 @@ pub fn recalc_style_at<E, D>(traversal: &D,
     println!("recalc_style_at2");
     context.thread_local.statistics.elements_traversed += 1;
     println!("recalc_style_at3");
-    let test = data.get_restyle().map_or(true, |_r| {
+    let test = data.get_restyle().map_or(true, |r| {
+        println!("aaa");
+        println!("Box {:?}", r);
+        println!("bbb");
         false
         //r.snapshot.is_none()
         //r.snapshot.is_none() && !r.has_sibling_invalidations()
