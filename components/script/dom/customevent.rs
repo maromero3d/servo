@@ -42,37 +42,33 @@ impl CustomEvent {
     pub fn new(global: &GlobalScope,
                type_: Atom,
                bubbles: bool,
-               cancelable: bool,
-               detail: HandleValue)
+               cancelable: bool)
                -> Root<CustomEvent> {
         let ev = CustomEvent::new_uninitialized(global);
-        ev.init_custom_event(type_, bubbles, cancelable, detail);
+        ev.init_custom_event(type_, bubbles, cancelable);
         ev
     }
 
     #[allow(unsafe_code)]
     pub fn Constructor(global: &GlobalScope,
                        type_: DOMString,
-                       init: RootedTraceableBox<CustomEventBinding::CustomEventInit>)
+                       init: &CustomEventBinding::CustomEventInit)
                        -> Fallible<Root<CustomEvent>> {
         Ok(CustomEvent::new(global,
                             Atom::from(type_),
                             init.parent.bubbles,
-                            init.parent.cancelable,
-                            init.detail.handle()))
+                            init.parent.cancelable))
     }
 
     fn init_custom_event(&self,
                          type_: Atom,
                          can_bubble: bool,
-                         cancelable: bool,
-                         detail: HandleValue) {
+                         cancelable: bool,) {
         let event = self.upcast::<Event>();
         if event.dispatching() {
             return;
         }
 
-        self.detail.set(detail.get());
         event.init_event(type_, can_bubble, cancelable);
     }
 }
@@ -86,13 +82,11 @@ impl CustomEventMethods for CustomEvent {
 
     #[allow(unsafe_code)]
     // https://dom.spec.whatwg.org/#dom-customevent-initcustomevent
-    unsafe fn InitCustomEvent(&self,
-                       _cx: *mut JSContext,
+    fn InitCustomEvent(&self,
                        type_: DOMString,
                        can_bubble: bool,
-                       cancelable: bool,
-                       detail: HandleValue) {
-        self.init_custom_event(Atom::from(type_), can_bubble, cancelable, detail)
+                       cancelable: bool) {
+        self.init_custom_event(Atom::from(type_), can_bubble, cancelable)
     }
 
     // https://dom.spec.whatwg.org/#dom-event-istrusted
