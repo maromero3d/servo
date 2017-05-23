@@ -11,14 +11,19 @@
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/>
 
-    <application android:label="Servo" android:icon="@mipmap/servo">
+    <application android:label="Rollercoaster" android:icon="@mipmap/servo">
         <activity android:name=".MainActivity"
-                android:label="Servo"
-                android:configChanges="orientation|keyboardHidden|screenSize">
+                android:label="Rollercoaster"
+            android:launchMode="singleTop"
+                android:screenOrientation="landscape"
+                android:configChanges="orientation|keyboardHidden|screenSize"
+                android:enableVrMode="@string/gvr_vr_mode_component"
+                android:resizeableActivity="false">
             <meta-data android:name="android.app.lib_name" android:value="servo" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="com.google.intent.category.DAYDREAM"/>
             </intent-filter>
 
             <!-- Web browser intents -->
