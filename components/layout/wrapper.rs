@@ -44,6 +44,7 @@ pub unsafe fn drop_style_and_layout_data(data: OpaqueStyleAndLayoutData) {
     let ptr: *mut StyleData = data.ptr.get();
     let non_opaque: *mut StyleAndLayoutData = ptr as *mut _;
     let _ = Box::from_raw(non_opaque);
+    println!("drop_style_and_layout_data end");
 }
 
 pub trait LayoutNodeLayoutData {

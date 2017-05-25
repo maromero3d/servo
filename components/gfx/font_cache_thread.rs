@@ -162,7 +162,7 @@ impl FontCache {
     fn run(&mut self) {
         loop {
             let msg = self.port.recv().unwrap();
-            panic!("msg {:?}", msg);
+
             match msg {
                 Command::GetFontTemplate(family, descriptor, result) => {
                     let maybe_font_template = self.find_font_template(&family, &descriptor);
@@ -406,13 +406,12 @@ impl FontCacheThread {
         let channel_to_self = chan.clone();
         thread::Builder::new().name("FontCacheThread".to_owned()).spawn(move || {
             // TODO: Allow users to specify these.
-            println!("font_cache1");
-            //let generic_fonts = populate_generic_fonts();
-            println!("font_cache2");
+            let generic_fonts = populate_generic_fonts();
+
             let mut cache = FontCache {
                 port: port,
                 channel_to_self: channel_to_self,
-                generic_fonts: Default::default(),
+                generic_fonts: generic_fonts,
                 local_families: HashMap::new(),
                 web_families: HashMap::new(),
                 font_context: FontContextHandle::new(),
@@ -421,9 +420,7 @@ impl FontCacheThread {
                 webrender_fonts: HashMap::new(),
             };
 
-            println!("font_cache3");
-            //cache.refresh_local_families();
-            println!("font_cache4");
+            cache.refresh_local_families();
             cache.run();
         }).expect("Thread spawning failed");
 

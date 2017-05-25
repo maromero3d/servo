@@ -20,4 +20,6 @@ opt-level = 3
 #
 #     "<crate>:<version>" = { path = "/path/to/local/checkout" }
 
-"rust-webvr:0.3.1" = { path = '/home/mortimer/Projects/rust-webvr' }
+"rust-webvr:0.4.0" = { path = '/home/mortimer/Projects/rust-webvr' }
+#"https://github.com/servo/webrender#0.39.0" = { path = '/home/mortimer/Projects/c003d55/webrender' }
+#"https://github.com/servo/webrender#webrender_traits:0.39.0" = { path = '/home/mortimer/Projects/c003d55/webrender_traits' }
